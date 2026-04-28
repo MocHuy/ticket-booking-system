@@ -1,4 +1,4 @@
-CREATE TABLE GIAODICHTHANHQUAN (
+CREATE TABLE GIAODICHTHANHTOAN (
     MaGiaoDich          VARCHAR2(50) PRIMARY KEY,
     SoTienThanhToan     NUMBER(18,2),
     PhuongThucTT        VARCHAR2(50),   -- 'Chuyển khoản' | 'Thẻ tín dụng' | 'Ví điện tử'

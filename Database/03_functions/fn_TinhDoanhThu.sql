@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION fn_TinhDoanhThu (
 BEGIN
     SELECT NVL(SUM(g.SoTienThanhToan), 0)
     INTO v_DoanhThu
-    FROM GIAODICHTHANHQUAN g
+    FROM GIAODICHTHANHTOAN g
     JOIN DONHANG d ON g.MaDonHang = d.MaDonHang
     JOIN VE v ON v.MaDonHang = d.MaDonHang
     WHERE g.TrangThaiGD = 'Thành công'
