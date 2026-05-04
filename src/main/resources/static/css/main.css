@@ -1,0 +1,210 @@
+/* ============================================================
+   main.css - Dề Dê Tickets
+   CSS toàn cục: font, navbar, biến màu, utilities
+   ============================================================ */
+
+/* ---- Google Font ---- */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display&display=swap');
+
+/* ---- CSS Variables ---- */
+:root {
+    --dd-bg:         #0d0f14;
+    --dd-surface:    #161820;
+    --dd-surface2:   #1e2028;
+    --dd-border:     rgba(255,255,255,0.08);
+    --dd-text:       #f1f1f3;
+    --dd-muted:      #6b7280;
+    --dd-accent:     #f59e0b;
+    --dd-accent2:    #ef4444;
+    --dd-indigo:     #6366f1;
+    --dd-radius:     12px;
+    --dd-radius-lg:  20px;
+}
+
+/* ---- Base ---- */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--dd-bg);
+    color: var(--dd-text);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main { flex: 1; }
+
+/* ---- Navbar ---- */
+.dd-navbar {
+    background: rgba(13,15,20,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--dd-border);
+    padding: 14px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.dd-navbar .navbar-brand {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--dd-text) !important;
+    letter-spacing: -0.3px;
+}
+
+.dd-navbar .nav-link {
+    color: var(--dd-muted) !important;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 6px 12px !important;
+    border-radius: 8px;
+    transition: all .2s;
+}
+
+.dd-navbar .nav-link:hover,
+.dd-navbar .nav-link.active {
+    color: var(--dd-text) !important;
+    background: rgba(255,255,255,0.06);
+}
+
+/* Avatar chữ cái đầu */
+.dd-avatar {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, var(--dd-accent), var(--dd-accent2));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+/* Dropdown menu */
+.dropdown-menu {
+    background: var(--dd-surface);
+    border: 1px solid var(--dd-border);
+    border-radius: var(--dd-radius);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    padding: 8px;
+}
+
+.dropdown-item {
+    color: var(--dd-muted);
+    font-size: 14px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    transition: all .15s;
+}
+
+.dropdown-item:hover {
+    background: rgba(255,255,255,0.06);
+    color: var(--dd-text);
+}
+
+.dropdown-item.text-danger { color: #f87171 !important; }
+.dropdown-item.text-danger:hover { background: rgba(239,68,68,0.1); }
+
+.dropdown-divider { border-color: var(--dd-border); margin: 4px 0; }
+
+/* ---- Footer ---- */
+.dd-footer {
+    background: var(--dd-surface);
+    border-top: 1px solid var(--dd-border);
+    color: var(--dd-muted);
+    font-size: 13px;
+}
+
+/* ---- Cards ---- */
+.dd-card {
+    background: var(--dd-surface);
+    border: 1px solid var(--dd-border);
+    border-radius: var(--dd-radius-lg);
+    transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+
+.dd-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(245,158,11,0.2);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+
+/* ---- Buttons ---- */
+.btn-dd-primary {
+    background: linear-gradient(135deg, var(--dd-accent), var(--dd-accent2));
+    border: none;
+    border-radius: var(--dd-radius);
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 24px;
+    font-size: 14px;
+    transition: all .2s;
+    letter-spacing: 0.2px;
+}
+
+.btn-dd-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(245,158,11,0.3);
+    color: #fff;
+    filter: brightness(1.05);
+}
+
+.btn-dd-outline {
+    background: transparent;
+    border: 1px solid var(--dd-border);
+    border-radius: var(--dd-radius);
+    color: var(--dd-muted);
+    font-weight: 500;
+    padding: 10px 24px;
+    font-size: 14px;
+    transition: all .2s;
+}
+
+.btn-dd-outline:hover {
+    border-color: rgba(255,255,255,0.2);
+    color: var(--dd-text);
+    background: rgba(255,255,255,0.04);
+}
+
+/* ---- Badge trạng thái ---- */
+.dd-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.3px;
+}
+
+.dd-badge-success { background: rgba(16,185,129,0.15); color: #34d399; }
+.dd-badge-warning { background: rgba(245,158,11,0.15); color: #fbbf24; }
+.dd-badge-danger  { background: rgba(239,68,68,0.15);  color: #f87171; }
+.dd-badge-info    { background: rgba(99,102,241,0.15);  color: #a5b4fc; }
+
+/* ---- Page header ---- */
+.dd-page-header {
+    padding: 48px 0 32px;
+}
+
+.dd-page-header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 36px;
+    letter-spacing: -0.5px;
+    color: var(--dd-text);
+}
+
+/* ---- Utilities ---- */
+.text-accent { color: var(--dd-accent) !important; }
+.text-muted-dd { color: var(--dd-muted) !important; }
+.border-dd { border: 1px solid var(--dd-border) !important; }
+.bg-surface { background: var(--dd-surface) !important; }
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+    .dd-page-header h1 { font-size: 28px; }
+    .login-card { padding: 32px 24px !important; }
+}

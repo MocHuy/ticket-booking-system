@@ -1,20 +1,36 @@
-# Build
+# Compiled class files
 target/
 *.class
 
-# IDE
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# Env & Config bảo mật (KHÔNG commit lên Git)
-.env
-db.properties
-
-# Logs
+# Log files
 *.log
 
-# OS
+# NetBeans specific
+nbproject/
+nb-configuration.xml
+nbactions.xml
+nbbuild/
+nbdist/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# OS specific
 .DS_Store
 Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
