@@ -1,104 +1,62 @@
 package com.dede.ticketsystem.model;
 
 import jakarta.persistence.*;
+import lombok.*;
+import java.sql.Date;
+import java.sql.Timestamp;
+import java.util.List;
 
 @Entity
 @Table(name = "NGUOIDUNG")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class NguoiDung {
 
     @Id
-    @Column(name = "MAND", length = 50)
+    @Column(name = "MaND", length = 50)
     private String maND;
 
-    @Column(name = "TENTAIKHOAN", unique = true, nullable = false)
+    @Column(name = "TenTaiKhoan", length = 50, unique = true)
     private String tenTaiKhoan;
 
-    @Column(name = "MATKHAUMAHOA", nullable = false)
+    @Column(name = "MatKhauMaHoa", length = 255)
     private String matKhauMaHoa;
 
-    @Column(name = "HOTEN")
-    private String hoTen;
+    @Column(name = "AnhDaiDien", length = 500)
+    private String anhDaiDien;
 
-    @Column(name = "EMAIL")
+    @Column(name = "GioiTinh", length = 10)
+    private String gioiTinh;
+
+    @Column(name = "Email", length = 100, unique = true)
     private String email;
 
-    @Column(name = "SDT")
+    @Column(name = "SDT", length = 20)
     private String sdt;
 
-    @Column(name = "MAVT")
-    private String maVT;
+    @Column(name = "NgaySinh")
+    private Date ngaySinh;
 
-    @Column(name = "TRANGTHAINDU")
-    private String trangThaiND;
+    @Column(name = "ThoiGianTao")
+    private Timestamp thoiGianTao;
 
-    public NguoiDung() {
-    }
+    @Column(name = "CapNhatLanCuoi")
+    private Timestamp capNhatLanCuoi;
 
+    @Column(name = "LanCuoiDangNhap")
+    private Timestamp lanCuoiDangNhap;
+
+    @Column(name = "TrangThaiND", length = 50)
+    private String trangThaiND;   // 'Hoat_dong' | 'Bi_khoa' | 'Cho_xac_nhan'
+
+    @OneToMany(mappedBy = "nguoiDung", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ChiTietVaiTro> chiTietVaiTros;
+    
     public boolean isAdmin() {
-        return "ADMIN".equals(this.maVT) || "VT01".equals(this.maVT);
+    if (this.chiTietVaiTros == null) {
+        return false;
     }
-
-    public String getMaND() {
-        return maND;
-    }
-
-    public void setMaND(String maND) {
-        this.maND = maND;
-    }
-
-    public String getTenTaiKhoan() {
-        return tenTaiKhoan;
-    }
-
-    public void setTenTaiKhoan(String tenTaiKhoan) {
-        this.tenTaiKhoan = tenTaiKhoan;
-    }
-
-    public String getMatKhauMaHoa() {
-        return matKhauMaHoa;
-    }
-
-    public void setMatKhauMaHoa(String matKhauMaHoa) {
-        this.matKhauMaHoa = matKhauMaHoa;
-    }
-
-    public String getHoTen() {
-        return hoTen;
-    }
-
-    public void setHoTen(String hoTen) {
-        this.hoTen = hoTen;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getSdt() {
-        return sdt;
-    }
-
-    public void setSdt(String sdt) {
-        this.sdt = sdt;
-    }
-
-    public String getMaVT() {
-        return maVT;
-    }
-
-    public void setMaVT(String maVT) {
-        this.maVT = maVT;
-    }
-
-    public String getTrangThaiND() {
-        return trangThaiND;
-    }
-
-    public void setTrangThaiND(String trangThaiND) {
-        this.trangThaiND = trangThaiND;
-    }
+ 
+    return this.chiTietVaiTros.stream()
+            .anyMatch(ct -> ct.getVaiTro().getMaVaiTro().equals("ADMIN")); 
+}
 }
