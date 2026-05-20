@@ -32,5 +32,7 @@ public interface DonHangRepository extends JpaRepository<DonHang, String> {
 
     @Query("SELECT d FROM DonHang d WHERE d.trangThaiDonHang = 'Chờ thanh toán' AND d.thoiGianHetHan < :now")
     List<DonHang> findExpiredPendingOrders(@Param("now") Timestamp now);
+
+    List<DonHang> findByMaKHOrderByThoiGianDatDesc(String maKH);
 }
 

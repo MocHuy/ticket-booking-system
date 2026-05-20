@@ -12,6 +12,8 @@ import com.dede.ticketsystem.repository.VeRepository;
 import com.dede.ticketsystem.repository.KhuVucRepository;
 import com.dede.ticketsystem.repository.SuKienRepository;
 import com.dede.ticketsystem.repository.GiaoDichThanhToanRepository;
+import com.dede.ticketsystem.repository.KhachHangRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,12 @@ public class BookingService {
     private final KhuVucRepository khuVucRepository;
     private final SuKienRepository suKienRepository;
     private final GiaoDichThanhToanRepository giaoDichThanhToanRepository;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private KhachHangRepository khachHangRepository;
 
     public BookingService(GheRepository gheRepository, 
                           DonHangRepository donHangRepository, 
@@ -205,6 +213,31 @@ public class BookingService {
 
             // Sinh vé và cập nhật trạng thái ghế
             issueTicketsAfterPaymentSuccess(orderId);
+
+            // Gửi email giả lập (LICHSUGUI_EMAIL & console)
+            try {
+                com.dede.ticketsystem.model.KhachHang kh = khachHangRepository.findById(maKH).orElse(null);
+                String email = null;
+                if (kh != null && kh.getNguoiDung() != null) {
+                    email = kh.getNguoiDung().getEmail();
+                }
+
+                if (email != null && !email.trim().isEmpty()) {
+                    // 1. Ghi log XAC_NHAN_DON_HANG
+                    emailService.sendOrderConfirmationEmail(email, dh);
+
+                    // 2. Ghi log QR_CODE cho từng vé mới tạo
+                    List<Ve> listVe = veRepository.findByMaDonHang(orderId);
+                    for (Ve ve : listVe) {
+                        emailService.sendTicketQREmail(email, ve);
+                    }
+                } else {
+                    System.err.println("Cảnh báo: Không tìm thấy email cho khách hàng: " + maKH + ". Không thực hiện gửi email.");
+                }
+            } catch (Exception e) {
+                System.err.println("Cảnh báo: Lỗi khi xử lý ghi log email: " + e.getMessage());
+                e.printStackTrace();
+            }
         } else {
             gd.setTrangThaiGD("Thất bại");
             gd.setGhiChuLoi("Giao dịch giả lập thất bại.");

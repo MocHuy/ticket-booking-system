@@ -111,4 +111,55 @@ public class VeService {
         ve.setTrangThaiVe("Đã hủy");
         veRepository.save(ve);
     }
+
+    public List<Ve> layVeCuaKhachHang(String maKH) {
+        return veRepository.findByMaKH(maKH);
+    }
+
+    public Optional<Ve> parsePayloadAndFindVe(String payloadOrCode) {
+        if (payloadOrCode == null || payloadOrCode.trim().isEmpty()) {
+            return Optional.empty();
+        }
+
+        String input = payloadOrCode.trim();
+
+        // 1. Nếu bắt đầu bằng TICKET|
+        if (input.startsWith("TICKET|")) {
+            String[] parts = input.split("\\|");
+            String parsedMaVe = null;
+            String parsedMaQR = null;
+            for (String part : parts) {
+                if (part.startsWith("maVe=")) {
+                    parsedMaVe = part.substring("maVe=".length());
+                } else if (part.startsWith("maQR=")) {
+                    parsedMaQR = part.substring("maQR=".length());
+                }
+            }
+
+            if (parsedMaVe != null && !parsedMaVe.trim().isEmpty()) {
+                Optional<Ve> veOpt = veRepository.findById(parsedMaVe.trim());
+                if (veOpt.isPresent()) {
+                    return veOpt;
+                }
+            }
+
+            if (parsedMaQR != null && !parsedMaQR.trim().isEmpty()) {
+                Optional<Ve> veOpt = veRepository.findByMaQR(parsedMaQR.trim());
+                if (veOpt.isPresent()) {
+                    return veOpt;
+                }
+            }
+
+            return Optional.empty();
+        }
+
+        // 2. Thử tìm bằng MaQR thuần
+        Optional<Ve> veByQR = veRepository.findByMaQR(input);
+        if (veByQR.isPresent()) {
+            return veByQR;
+        }
+
+        // 3. Thử tìm bằng MaVe thuần
+        return veRepository.findById(input);
+    }
 }

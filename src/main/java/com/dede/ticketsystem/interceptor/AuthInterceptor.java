@@ -98,7 +98,9 @@ public class AuthInterceptor implements HandlerInterceptor {
                uri.equals("/thanh-toan") || 
                uri.startsWith("/api/booking/") ||
                uri.startsWith("/tai-khoan-cua-toi/") ||
+               uri.equals("/ve-cua-toi") ||
                uri.startsWith("/ve-cua-toi/") ||
+               uri.equals("/don-hang-cua-toi") ||
                uri.startsWith("/don-hang-cua-toi/");
     }
 

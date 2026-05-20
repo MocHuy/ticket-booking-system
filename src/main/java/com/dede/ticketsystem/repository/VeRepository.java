@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface VeRepository extends JpaRepository<Ve, String> {
@@ -43,5 +44,13 @@ public interface VeRepository extends JpaRepository<Ve, String> {
             @Param("maKH") String maKH,
             @Param("maSK") String maSK,
             @Param("maKhuVuc") String maKhuVuc);
+
+    Optional<Ve> findByMaQR(String maQR);
+
+    @Query("SELECT v FROM Ve v JOIN DonHang d ON v.maDonHang = d.maDonHang WHERE v.maVe = :maVe AND d.maKH = :maKH")
+    Optional<Ve> findByMaVeAndMaKH(@Param("maVe") String maVe, @Param("maKH") String maKH);
+
+    @Query("SELECT v FROM Ve v JOIN DonHang d ON v.maDonHang = d.maDonHang WHERE d.maKH = :maKH ORDER BY v.thoiGianPhat DESC")
+    List<Ve> findByMaKH(@Param("maKH") String maKH);
 }
 
