@@ -20,7 +20,7 @@ public class LogHanhViService {
     public void log(String loaiHanhDong, String maSK, String maKH, String thietBi) {
         try {
             LogHanhVi logObj = new LogHanhVi();
-            logObj.setMaLog("L-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
+            logObj.setMaLog("LOG-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
             logObj.setLoaiHanhDong(loaiHanhDong);
             logObj.setMaSK(maSK);
             logObj.setThoiGian(new Timestamp(System.currentTimeMillis()));

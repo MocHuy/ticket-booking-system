@@ -5,14 +5,14 @@ import java.math.BigDecimal;
 public class BaoCaoSuKienDTO {
     private String maSK;
     private String tenSK;
-    private int tongSoVe;
-    private int veDaBan;
-    private int veConLai;
+    private long tongSoVe;
+    private long soVeDaBan;
+    private long soVeConLai;
     private BigDecimal doanhThu;
     private double tyLeLapDay;
-    private long soLuotXem;
-    private long soLuotClickDatVe;
-    private long soLuotBoGio;
+    private long luotXem;
+    private long luotClick;
+    private long luotBoGioHang;
     private double tyLeChuyenDoi;
 
     public BaoCaoSuKienDTO() {
@@ -34,28 +34,28 @@ public class BaoCaoSuKienDTO {
         this.tenSK = tenSK;
     }
 
-    public int getTongSoVe() {
+    public long getTongSoVe() {
         return tongSoVe;
     }
 
-    public void setTongSoVe(int tongSoVe) {
+    public void setTongSoVe(long tongSoVe) {
         this.tongSoVe = tongSoVe;
     }
 
-    public int getVeDaBan() {
-        return veDaBan;
+    public long getSoVeDaBan() {
+        return soVeDaBan;
     }
 
-    public void setVeDaBan(int veDaBan) {
-        this.veDaBan = veDaBan;
+    public void setSoVeDaBan(long soVeDaBan) {
+        this.soVeDaBan = soVeDaBan;
     }
 
-    public int getVeConLai() {
-        return veConLai;
+    public long getSoVeConLai() {
+        return soVeConLai;
     }
 
-    public void setVeConLai(int veConLai) {
-        this.veConLai = veConLai;
+    public void setSoVeConLai(long soVeConLai) {
+        this.soVeConLai = soVeConLai;
     }
 
     public BigDecimal getDoanhThu() {
@@ -74,29 +74,28 @@ public class BaoCaoSuKienDTO {
         this.tyLeLapDay = tyLeLapDay;
     }
 
-    public long getSoLuotXem() {
-        return soLuotXem;
+    public long getLuotXem() {
+        return luotXem;
     }
 
-    public void setSoLuotXem(long soLuotXem) {
-        this.soLuotXem = soLuotXem;
+    public void setLuotXem(long luotXem) {
+        this.luotXem = luotXem;
     }
 
-    public long getSoLuotClickDatVe() {
-        return soLuotClickDatVe;
+    public long getLuotClick() {
+        return luotClick;
     }
 
-    public void setSoLuotClickDatVe(long soLuotClickDatVe) {
-        this.soLuotClickDatVe = 
-        soLuotClickDatVe;
+    public void setLuotClick(long luotClick) {
+        this.luotClick = luotClick;
     }
 
-    public long getSoLuotBoGio() {
-        return soLuotBoGio;
+    public long getLuotBoGioHang() {
+        return luotBoGioHang;
     }
 
-    public void setSoLuotBoGio(long soLuotBoGio) {
-        this.soLuotBoGio = soLuotBoGio;
+    public void setLuotBoGioHang(long luotBoGioHang) {
+        this.luotBoGioHang = luotBoGioHang;
     }
 
     public double getTyLeChuyenDoi() {

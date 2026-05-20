@@ -32,13 +32,7 @@ public class SeatLockCleanupTask {
         if (!expiredOrders.isEmpty()) {
             for (DonHang dh : expiredOrders) {
                 try {
-                    dh.setTrangThaiDonHang("Đã hủy");
-                    dh.setCapNhatLanCuoi(now);
-                    donHangRepository.save(dh);
-                    
-                    // Giải phóng ghế
-                    bookingService.releaseSeats(dh.getMaDonHang());
-                    
+                    bookingService.cancelAndReleaseExpiredOrder(dh.getMaDonHang());
                     System.out.println("[SeatLockCleanupTask] Đã hủy đơn hàng quá hạn: " + dh.getMaDonHang());
                 } catch (Exception e) {
                     System.err.println("[SeatLockCleanupTask] Lỗi khi hủy đơn hàng quá hạn " + dh.getMaDonHang() + ": " + e.getMessage());
