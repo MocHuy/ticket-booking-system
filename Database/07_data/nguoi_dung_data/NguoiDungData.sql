@@ -4,11 +4,11 @@
 -- ============================================================
 
 -- Hạng thành viên (tái sử dụng logic từ workspace gốc)
-INSERT INTO HANGTHANHVIEN VALUES ('HANG_DONG', 'Không có', 0, 0);
-INSERT INTO HANGTHANHVIEN VALUES ('HANG_BẠNG', 'Đồng', 2, 1000000);
-INSERT INTO HANGTHANHVIEN VALUES ('HANG_BAC', 'Bạc', 5, 5000000);
-INSERT INTO HANGTHANHVIEN VALUES ('HANG_VANG', 'Vàng', 10, 20000000);
-INSERT INTO HANGTHANHVIEN VALUES ('HANG_KIM', 'Kim cương', 20, 50000000);
+INSERT INTO HANGTHANHVIEN (MaHangThanhVien, TenHang, TyLeGiamGia, ChiTieuToiThieu) VALUES ('HANG_DONG', 'Không có', 0, 0);
+INSERT INTO HANGTHANHVIEN (MaHangThanhVien, TenHang, TyLeGiamGia, ChiTieuToiThieu) VALUES ('HANG_BẠNG', 'Đồng', 2, 1000000);
+INSERT INTO HANGTHANHVIEN (MaHangThanhVien, TenHang, TyLeGiamGia, ChiTieuToiThieu) VALUES ('HANG_BAC', 'Bạc', 5, 5000000);
+INSERT INTO HANGTHANHVIEN (MaHangThanhVien, TenHang, TyLeGiamGia, ChiTieuToiThieu) VALUES ('HANG_VANG', 'Vàng', 10, 20000000);
+INSERT INTO HANGTHANHVIEN (MaHangThanhVien, TenHang, TyLeGiamGia, ChiTieuToiThieu) VALUES ('HANG_KIM', 'Kim cương', 20, 50000000);
 
 -- Vai trò (tái sử dụng nguyên xi từ workspace gốc)
 INSERT INTO VAITRO VALUES ('VT001', 'Quản trị viên', 'Toàn quyền hệ thống');

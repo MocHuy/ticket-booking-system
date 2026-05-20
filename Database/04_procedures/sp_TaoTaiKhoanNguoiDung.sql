@@ -17,7 +17,7 @@ BEGIN
     -- Tạo hồ sơ khách hàng nếu là khách hàng
     IF p_LoaiND = 'KhachHang' THEN
         INSERT INTO KHACHHANG (MaKH, HoTenKH, TongChiTieu, CapNhatLanCuoi, MaHangThanhVien, MaND)
-        VALUES ('KH_' || p_MaND, p_TenTaiKhoan, 0, SYSTIMESTAMP, 'HANG_DONG', p_MaND);
+        VALUES ('KH_' || p_MaND, p_TenTaiKhoan, 0, SYSTIMESTAMP, NULL, p_MaND);
     END IF;
 
     COMMIT;

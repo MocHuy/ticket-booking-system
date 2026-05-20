@@ -75,7 +75,7 @@ public class BookingController {
             }
 
             // Gọi logic giữ ghế
-            String orderId = bookingService.lockSeats(maGheList, maSK, maKH);
+            String orderId = bookingService.lockSeats(maGheList, maSK, maKH, queueToken);
 
             // 3. Consume token on success
             if (queueService.shouldQueue(maSK) && queueToken != null) {
@@ -129,7 +129,7 @@ public class BookingController {
 
             String paymentMethod = (String) payload.get("paymentMethod");
             if (paymentMethod == null) {
-                paymentMethod = "Chuyển khoản ngân hàng";
+                paymentMethod = "Chuyển khoản";
             }
 
             com.dede.ticketsystem.service.PaymentResult result = paymentService.processPayment(orderId, maKH, paymentMethod, simulateResult);

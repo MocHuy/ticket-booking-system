@@ -36,6 +36,8 @@ public class QueueService {
 
     /**
      * Checks if queuing is needed for the event.
+     * CHUẨN ĐANG DÙNG: pendingOrderCount >= threshold để tránh double-count giữa pending orders và locked seats
+     * (vì chúng biểu diễn cùng một lượng hold trên hệ thống).
      */
     public boolean shouldQueue(String maSK) {
         long pendingOrders = donHangRepository.countPendingOrdersByMaSK(maSK);
@@ -83,7 +85,14 @@ public class QueueService {
             // Estimated wait: now + position * 30 seconds
             h.setThoiGianUocTinh(new Timestamp(now.getTime() + nextViTri * 30 * 1000L));
             h.setTrangThai("Đang chờ");
-            h.setTokenHangDoi("TK-" + UUID.randomUUID().toString().toUpperCase());
+            
+            // Đảm bảo TokenHangDoi phải unique
+            String token;
+            do {
+                token = "TK-" + UUID.randomUUID().toString().toUpperCase();
+            } while (hangDoiAoRepository.findByTokenHangDoi(token).isPresent());
+            h.setTokenHangDoi(token);
+
             // Position wait duration expires in 30 minutes if they never get allowed
             h.setThoiGianHetHan(new Timestamp(now.getTime() + 30 * 60 * 1000L));
             h.setMaKH(maKH);
@@ -152,6 +161,12 @@ public class QueueService {
         for (HangDoiAo h : waiting) {
             if (count >= limit) {
                 break;
+            }
+            // Không allow người đã hết hạn
+            if (h.getThoiGianHetHan() != null && h.getThoiGianHetHan().before(now)) {
+                h.setTrangThai("Hết hạn");
+                hangDoiAoRepository.save(h);
+                continue;
             }
             h.setTrangThai("Được vào");
             h.setThoiGianHetHan(expires);

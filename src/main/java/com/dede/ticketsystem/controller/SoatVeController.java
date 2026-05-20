@@ -41,10 +41,17 @@ public class SoatVeController {
      */
     @GetMapping("/soat-ve")
     public String showSoatVe(Model model) {
+        if (!sessionService.isLoggedIn()) {
+            return "redirect:/dang-nhap";
+        }
+        if (!sessionService.hasAnyRole("STAFF", "ADMIN")) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Yêu cầu quyền STAFF hoặc ADMIN.");
+        }
+        
         // Lấy thông tin mã nhân viên
         String maNV = sessionService.getCurrentMaNV();
         if (maNV == null) {
-            model.addAttribute("errorMsg", "Không tìm thấy thông tin Nhân viên (MaNV) liên kết với tài khoản của bạn. Vui lòng liên hệ Admin!");
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được liên kết với hồ sơ Nhân viên (NHANVIEN).");
         }
 
         // Lấy danh sách tất cả các sự kiện để nhân viên chọn

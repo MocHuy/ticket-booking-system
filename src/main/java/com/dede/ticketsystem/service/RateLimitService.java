@@ -46,4 +46,27 @@ public class RateLimitService {
             }
         }
     }
+
+    /**
+     * Dọn dẹp định kỳ 5 phút một lần để xoá các key rỗng hoặc quá hạn, chống rò rỉ bộ nhớ (Memory Leak).
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 300000)
+    public void cleanUpExpiredRateLimits() {
+        long now = System.currentTimeMillis();
+        long windowStart = now - (windowSeconds * 1000L);
+
+        java.util.Iterator<java.util.Map.Entry<String, Deque<Long>>> iterator = requestLogs.entrySet().iterator();
+        while (iterator.hasNext()) {
+            java.util.Map.Entry<String, Deque<Long>> entry = iterator.next();
+            Deque<Long> timestamps = entry.getValue();
+            synchronized (timestamps) {
+                while (!timestamps.isEmpty() && timestamps.peekFirst() < windowStart) {
+                    timestamps.pollFirst();
+                }
+                if (timestamps.isEmpty()) {
+                    iterator.remove();
+                }
+            }
+        }
+    }
 }

@@ -40,6 +40,9 @@ public class BookingService {
     private LogHanhViService logHanhViService;
 
     @Autowired
+    private QueueService queueService;
+
+    @Autowired
     @org.springframework.context.annotation.Lazy
     private BookingService self;
 
@@ -58,7 +61,7 @@ public class BookingService {
     }
 
     @Transactional
-    public String lockSeats(List<String> maGheList, String maSK, String maKH) {
+    public String lockSeats(List<String> maGheList, String maSK, String maKH, String queueToken) {
         if (maGheList == null || maGheList.isEmpty()) {
             throw new RuntimeException("Danh sách ghế chọn không được để trống!");
         }
@@ -130,6 +133,13 @@ public class BookingService {
             tongTien = tongTien.add(giaVe.multiply(new java.math.BigDecimal(soGheChon)));
         }
 
+        // Nếu đang bật hàng đợi ảo thì queueToken phải hợp lệ.
+        if (queueService.shouldQueue(maSK)) {
+            if (queueToken == null || !queueService.validateQueueToken(queueToken, maKH, maSK)) {
+                throw new RuntimeException("Bạn cần vào hàng đợi trước khi đặt vé.");
+            }
+        }
+
         // Tạo DONHANG trạng thái "Chờ thanh toán"
         String maDonHang = "DH-" + System.currentTimeMillis() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
         Timestamp thoiGianHetHan = new Timestamp(now.getTime() + 10 * 60 * 1000); // now + 10 phút
@@ -170,8 +180,16 @@ public class BookingService {
     @Transactional
     public void completePaidOrder(String orderId) {
         Timestamp now = new Timestamp(System.currentTimeMillis());
-        DonHang dh = donHangRepository.findById(orderId).orElse(null);
+        DonHang dh = donHangRepository.findByIdWithLock(orderId).orElse(null);
         if (dh == null) return;
+
+        // Nếu DONHANG đã "Đã thanh toán" và đã có VE thì return ngay.
+        if ("Đã thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
+            List<Ve> existingTickets = veRepository.findByMaDonHang(orderId);
+            if (!existingTickets.isEmpty()) {
+                return;
+            }
+        }
 
         // Idempotent: chỉ chuyển trạng thái nếu chưa Đã thanh toán
         if (!"Đã thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
@@ -193,12 +211,20 @@ public class BookingService {
 
             if (email != null && !email.trim().isEmpty()) {
                 // 1. Ghi log XAC_NHAN_DON_HANG
-                emailService.sendOrderConfirmationEmail(email, dh);
+                try {
+                    emailService.sendOrderConfirmationEmail(email, dh);
+                } catch (Exception e) {
+                    System.err.println("Cảnh báo: Lỗi khi gửi email xác nhận: " + e.getMessage());
+                }
 
                 // 2. Ghi log QR_CODE cho từng vé mới tạo
                 List<Ve> listVe = veRepository.findByMaDonHang(orderId);
                 for (Ve ve : listVe) {
-                    emailService.sendTicketQREmail(email, ve);
+                    try {
+                        emailService.sendTicketQREmail(email, ve);
+                    } catch (Exception e) {
+                        System.err.println("Cảnh báo: Lỗi khi gửi email QR: " + e.getMessage());
+                    }
                 }
             } else {
                 System.err.println("Cảnh báo: Không tìm thấy email cho khách hàng: " + dh.getMaKH() + ". Không thực hiện gửi email.");
@@ -322,23 +348,31 @@ public class BookingService {
     public void releaseSeats(String orderId) {
         List<Ghe> gheList = gheRepository.findByMaPhienKhoa(orderId);
         for (Ghe ghe : gheList) {
-            ghe.setTrangThaiGhe("Trống");
-            ghe.setThoiGianKhoaTam(null);
-            ghe.setMaPhienKhoa(null);
+            if ("Đang chọn".equals(ghe.getTrangThaiGhe())) {
+                ghe.setTrangThaiGhe("Trống");
+                ghe.setThoiGianKhoaTam(null);
+                ghe.setMaPhienKhoa(null);
+            }
         }
         gheRepository.saveAll(gheList);
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void cancelAndReleaseExpiredOrder(String orderId) {
-        DonHang dh = donHangRepository.findById(orderId).orElse(null);
-        String maKH = null;
-        if (dh != null) {
-            maKH = dh.getMaKH();
-            dh.setTrangThaiDonHang("Đã hủy");
-            dh.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));
-            donHangRepository.save(dh);
+        DonHang dh = donHangRepository.findByIdWithLock(orderId).orElse(null);
+        if (dh == null) {
+            return;
         }
+
+        // Chỉ hủy nếu đơn hàng ở trạng thái "Chờ thanh toán"
+        if (!"Chờ thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
+            return;
+        }
+
+        String maKH = dh.getMaKH();
+        dh.setTrangThaiDonHang("Đã hủy");
+        dh.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));
+        donHangRepository.save(dh);
 
         String maSK = null;
         List<Ghe> seats = gheRepository.findByMaPhienKhoa(orderId);

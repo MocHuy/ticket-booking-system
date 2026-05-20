@@ -19,7 +19,7 @@ public class EmailService {
         this.lichSuGuiEmailRepository = lichSuGuiEmailRepository;
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void sendOrderConfirmationEmail(String email, DonHang donHang) {
         if (donHang == null || email == null || email.trim().isEmpty()) {
             return;
@@ -51,7 +51,7 @@ public class EmailService {
         System.out.println("--------------------------------------------------------------------------------");
     }
 
-    @Transactional
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void sendTicketQREmail(String email, Ve ve) {
         if (ve == null || email == null || email.trim().isEmpty()) {
             return;

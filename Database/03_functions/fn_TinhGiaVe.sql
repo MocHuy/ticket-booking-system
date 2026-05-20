@@ -11,7 +11,7 @@ BEGIN
 
     IF p_MaKhachHang IS NOT NULL THEN
         BEGIN
-            SELECT NVL(h.PhanTramTienGiam, 0)
+            SELECT NVL(h.TyLeGiamGia, 0)
             INTO v_PhanTramGiam
             FROM KHACHHANG kh
             JOIN HANGTHANHVIEN h ON kh.MaHangThanhVien = h.MaHangThanhVien
