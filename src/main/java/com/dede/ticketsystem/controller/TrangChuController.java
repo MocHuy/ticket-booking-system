@@ -51,13 +51,25 @@ public class TrangChuController {
         return "Public/index";
     }
 
+    @Autowired
+    private com.dede.ticketsystem.service.LogHanhViService logHanhViService;
+
     @GetMapping("/su-kien/{maSK}")
-    public String chiTietSuKien(@PathVariable String maSK, Model model) {
+    public String chiTietSuKien(@PathVariable String maSK, Model model, jakarta.servlet.http.HttpServletRequest request) {
         SuKien sk = suKienService.timTheoMa(maSK).orElse(null);
         if (sk == null) {
             return "redirect:/";
         }
         
+        // Ghi log hành vi XEM_SK
+        try {
+            String userAgent = request.getHeader("User-Agent");
+            String maKH = sessionService.getCurrentMaKH();
+            logHanhViService.log("XEM_SK", maSK, maKH, userAgent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         List<KhuVuc> zones = khuVucRepository.findByMaSK(maSK);
         
         boolean canBuy = false;
@@ -77,7 +89,7 @@ public class TrangChuController {
     }
 
     @GetMapping("/mua-ve/{maSK}")
-    public String chonGhe(@PathVariable String maSK, Model model) {
+    public String chonGhe(@PathVariable String maSK, Model model, jakarta.servlet.http.HttpServletRequest request) {
         if (!sessionService.isLoggedIn()) {
             return "redirect:/dang-nhap?redirect=/mua-ve/" + maSK;
         }
@@ -85,6 +97,15 @@ public class TrangChuController {
             return "redirect:/";
         }
         
+        // Ghi log hành vi CLICK_DAT_VE
+        try {
+            String userAgent = request.getHeader("User-Agent");
+            String maKH = sessionService.getCurrentMaKH();
+            logHanhViService.log("CLICK_DAT_VE", maSK, maKH, userAgent);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         SuKien sk = suKienService.timTheoMa(maSK).orElse(null);
         if (sk == null) {
             return "redirect:/";
@@ -98,6 +119,9 @@ public class TrangChuController {
         model.addAttribute("seats", seats);
         return "Public/chon-ghe";
     }
+
+    @Autowired
+    private com.dede.ticketsystem.repository.GiaoDichThanhToanRepository giaoDichThanhToanRepository;
 
     @GetMapping("/thanh-toan")
     public String thanhToan(@RequestParam(required = false) String orderId, Model model) {
@@ -124,27 +148,51 @@ public class TrangChuController {
             return "redirect:/";
         }
 
-        // Kiểm tra trạng thái đơn hàng
-        if (!"Chờ thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
+        // Nếu đơn đã thanh toán thì redirect /ve-cua-toi
+        if ("Đã thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
+            return "redirect:/ve-cua-toi";
+        }
+
+        // Nếu đơn đã hủy thì redirect /
+        if ("Đã hủy".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
             return "redirect:/";
         }
 
         Timestamp now = new Timestamp(System.currentTimeMillis());
+        // Nếu đơn hết hạn thì hủy đơn và redirect /
+        if (dh.getThoiGianHetHan() != null && now.after(dh.getThoiGianHetHan())) {
+            bookingService.cancelAndReleaseExpiredOrder(orderId);
+            return "redirect:/";
+        }
+
+        // Lấy số lần thử từ DB
+        Integer maxLan = giaoDichThanhToanRepository.findMaxLanThuLaiByMaDonHang(orderId);
+        int lanDaThu = (maxLan != null) ? maxLan : 0;
+        
+        if (lanDaThu >= 3) {
+            bookingService.cancelOrder(orderId, maKH);
+            return "redirect:/";
+        }
+
+        int lanConLai = Math.max(0, 3 - lanDaThu);
+
+        // Lấy lỗi gần nhất nếu có
+        String latestError = "";
+        List<com.dede.ticketsystem.model.GiaoDichThanhToan> gdList = giaoDichThanhToanRepository.findByMaDonHangOrderByLanThuLaiDesc(orderId);
+        for (com.dede.ticketsystem.model.GiaoDichThanhToan gd : gdList) {
+            if ("Thất bại".equalsIgnoreCase(gd.getTrangThaiGD())) {
+                latestError = gd.getGhiChuLoi();
+                break;
+            }
+        }
+
         long remainingSeconds = 0;
         if (dh.getThoiGianHetHan() != null) {
             remainingSeconds = (dh.getThoiGianHetHan().getTime() - now.getTime()) / 1000;
         }
 
-        // Nếu quá hạn thì hủy luôn đơn hàng và giải phóng ghế
         if (remainingSeconds <= 0) {
-            try {
-                dh.setTrangThaiDonHang("Đã hủy");
-                dh.setCapNhatLanCuoi(now);
-                donHangRepository.save(dh);
-                bookingService.releaseSeats(orderId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            bookingService.cancelAndReleaseExpiredOrder(orderId);
             return "redirect:/";
         }
 
@@ -162,6 +210,10 @@ public class TrangChuController {
         model.addAttribute("tongTien", dh.getThanhTien());
         model.addAttribute("orderId", orderId);
         model.addAttribute("remainingSeconds", remainingSeconds);
+        
+        model.addAttribute("lanDaThu", lanDaThu);
+        model.addAttribute("lanConLai", lanConLai);
+        model.addAttribute("latestError", latestError);
         
         return "Public/thanh-toan";
     }

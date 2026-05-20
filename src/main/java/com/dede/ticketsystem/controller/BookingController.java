@@ -58,6 +58,9 @@ public class BookingController {
         }
     }
 
+    @Autowired
+    private com.dede.ticketsystem.service.PaymentService paymentService;
+
     @PostMapping("/checkout")
     public ResponseEntity<?> checkout(@RequestBody Map<String, Object> payload) {
         try {
@@ -78,27 +81,29 @@ public class BookingController {
 
             String orderId = (String) payload.get("orderId");
             if (orderId == null) {
-                // Hỗ trợ fallback nếu client gửi param cũ
                 orderId = (String) payload.get("seats");
             }
             
-            Object successObj = payload.get("success");
-            boolean success = false;
-            if (successObj instanceof Boolean) {
-                success = (Boolean) successObj;
-            } else if (successObj instanceof String) {
-                success = Boolean.parseBoolean((String) successObj);
+            String simulateResult = (String) payload.get("simulateResult");
+            if (simulateResult == null) {
+                Object successObj = payload.get("success");
+                boolean success = false;
+                if (successObj instanceof Boolean) {
+                    success = (Boolean) successObj;
+                } else if (successObj instanceof String) {
+                    success = Boolean.parseBoolean((String) successObj);
+                }
+                simulateResult = success ? "Thành công" : "Thất bại";
             }
 
-            String simulateResult = success ? "Thành công" : "Thất bại";
             String paymentMethod = (String) payload.get("paymentMethod");
             if (paymentMethod == null) {
                 paymentMethod = "Chuyển khoản ngân hàng";
             }
 
-            bookingService.processCheckout(orderId, maKH, paymentMethod, simulateResult);
+            com.dede.ticketsystem.service.PaymentResult result = paymentService.processPayment(orderId, maKH, paymentMethod, simulateResult);
             
-            return ResponseEntity.ok(Map.of("message", "Thanh toán thành công! Vé của bạn đã sẵn sàng.", "redirect", "/"));
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));

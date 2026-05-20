@@ -1,11 +1,13 @@
 package com.dede.ticketsystem.controller;
 
 import com.dede.ticketsystem.model.DonHang;
-import com.dede.ticketsystem.model.NguoiDung;
+import com.dede.ticketsystem.model.KhachHang;
+import com.dede.ticketsystem.repository.KhachHangRepository;
 import com.dede.ticketsystem.service.DonHangService;
-import com.dede.ticketsystem.service.TaiKhoanService;
+import com.dede.ticketsystem.service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +24,13 @@ public class DonHangController {
     private DonHangService donHangService;
 
     @Autowired
-    private TaiKhoanService taiKhoanService;
+    private KhachHangRepository khachHangRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private SessionService sessionService;
 
     /** Trang danh sách đơn hàng */
     @GetMapping
@@ -39,11 +47,17 @@ public class DonHangController {
 
         Map<String, String> mapKhachHang = new java.util.HashMap<>();
         try {
-            List<NguoiDung> nguoiDungs = taiKhoanService.getDanhSachTatCa();
-            for (NguoiDung nd : nguoiDungs) {
-                mapKhachHang.put(nd.getMaND(), nd.getTenTaiKhoan());
+            List<KhachHang> khachHangs = khachHangRepository.findAll();
+            for (KhachHang kh : khachHangs) {
+                String displayName = kh.getHoTenKH();
+                if (displayName == null || displayName.isBlank()) {
+                    displayName = kh.getNguoiDung() != null ? kh.getNguoiDung().getTenTaiKhoan() : kh.getMaKH();
+                }
+                mapKhachHang.put(kh.getMaKH(), displayName);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         model.addAttribute("donHangList", list);
         model.addAttribute("mapKhachHang", mapKhachHang);
@@ -86,9 +100,6 @@ public class DonHangController {
         }
     }
 
-    @Autowired
-    private com.dede.ticketsystem.service.SessionService sessionService;
-
     /** API: tạo đơn hàng nhanh (test) */
     @PostMapping("/api/tao-nhanh")
     @ResponseBody
@@ -96,11 +107,19 @@ public class DonHangController {
         try {
             String currentMaKH = (maKH != null && !maKH.isBlank()) ? maKH : sessionService.getCurrentMaKH();
             if (currentMaKH == null) {
-                // Thử lấy khách hàng hiện tại của user, hoặc fallback
-                currentMaKH = "KH001"; 
+                throw new RuntimeException("Vui lòng đăng nhập với tài khoản Khách hàng để đặt đơn hàng!");
             }
+            
             String currentMaND = sessionService.getCurrentMaND();
-            String maNV = currentMaND != null ? currentMaND : "NV001";
+            String maNV = null;
+            if (currentMaND != null) {
+                try {
+                    maNV = jdbcTemplate.queryForObject("SELECT MaNV FROM NHANVIEN WHERE MaND = ?", String.class, currentMaND);
+                } catch (Exception e) {
+                    // ignore if current user is not a staff/admin
+                }
+            }
+
             DonHang dh = donHangService.taoDonHang(maSK, soLuong, currentMaKH, maNV);
             return ResponseEntity.ok(Map.of("message", "Tạo đơn hàng thành công", "maDonHang", dh.getMaDonHang()));
         } catch (Exception e) {

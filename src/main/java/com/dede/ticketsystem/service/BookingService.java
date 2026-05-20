@@ -36,6 +36,13 @@ public class BookingService {
     @Autowired
     private KhachHangRepository khachHangRepository;
 
+    @Autowired
+    private LogHanhViService logHanhViService;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private BookingService self;
+
     public BookingService(GheRepository gheRepository, 
                           DonHangRepository donHangRepository, 
                           VeRepository veRepository, 
@@ -151,102 +158,62 @@ public class BookingService {
         return maDonHang;
     }
 
+    @Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
+
     @Transactional
     public void processCheckout(String orderId, String maKH, String paymentMethod, String simulateResult) {
+        PaymentService paymentService = applicationContext.getBean(PaymentService.class);
+        paymentService.processPayment(orderId, maKH, paymentMethod, simulateResult);
+    }
+
+    @Transactional
+    public void completePaidOrder(String orderId) {
         Timestamp now = new Timestamp(System.currentTimeMillis());
+        DonHang dh = donHangRepository.findById(orderId).orElse(null);
+        if (dh == null) return;
 
-        // Khóa DONHANG bằng PESSIMISTIC_WRITE trước khi xử lý
-        DonHang dh = donHangRepository.findByIdWithLock(orderId)
-                .orElseThrow(() -> new RuntimeException("Đơn hàng không tồn tại!"));
-
-        // Kiểm tra đơn hàng thuộc maKH hiện tại
-        if (!dh.getMaKH().equals(maKH)) {
-            throw new RuntimeException("Bạn không có quyền thanh toán đơn hàng này!");
-        }
-
-        // Nếu đơn đã "Đã thanh toán"
-        if ("Đã thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
-            // Không tạo vé thêm lần nữa
-            List<Ve> veDaCo = veRepository.findByMaDonHang(orderId);
-            if (!veDaCo.isEmpty()) {
-                // Trả về thông báo đơn đã thanh toán
-                return;
-            }
-            issueTicketsAfterPaymentSuccess(orderId);
-            return;
-        }
-
-        // Nếu đơn đã "Đã hủy"
-        if ("Đã hủy".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
-            throw new RuntimeException("Đơn hàng đã bị hủy và không thể checkout!");
-        }
-
-        // Nếu đơn đã hết hạn
-        if (dh.getThoiGianHetHan() != null && now.after(dh.getThoiGianHetHan())) {
-            dh.setTrangThaiDonHang("Đã hủy");
-            dh.setCapNhatLanCuoi(now);
-            donHangRepository.save(dh);
-
-            releaseSeats(orderId);
-
-            throw new RuntimeException("Đơn hàng đã hết hạn thanh toán!");
-        }
-
-        // Ghi GIAODICHTHANHTOAN
-        GiaoDichThanhToan gd = new GiaoDichThanhToan();
-        gd.setMaGiaoDich("GD-" + System.currentTimeMillis() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8));
-        gd.setSoTienThanhToan(dh.getThanhTien());
-        gd.setPhuongThucTT(paymentMethod);
-        gd.setThoiGianThucHien(now);
-        gd.setMaDonHang(orderId);
-        gd.setLanThuLai(0);
-
-        if ("Thành công".equalsIgnoreCase(simulateResult)) {
-            gd.setTrangThaiGD("Thành công");
-            gd.setMaGiaoDichBenThu3("MOCK-SUCCESS-" + java.util.UUID.randomUUID().toString().substring(0, 8));
-            giaoDichThanhToanRepository.save(gd);
-
-            // Cập nhật DONHANG = "Đã thanh toán"
+        // Idempotent: chỉ chuyển trạng thái nếu chưa Đã thanh toán
+        if (!"Đã thanh toán".equalsIgnoreCase(dh.getTrangThaiDonHang())) {
             dh.setTrangThaiDonHang("Đã thanh toán");
             dh.setCapNhatLanCuoi(now);
             donHangRepository.save(dh);
+        }
 
-            // Sinh vé và cập nhật trạng thái ghế
-            issueTicketsAfterPaymentSuccess(orderId);
+        // Sinh vé và cập nhật trạng thái ghế
+        issueTicketsAfterPaymentSuccess(orderId);
 
-            // Gửi email giả lập (LICHSUGUI_EMAIL & console)
-            try {
-                com.dede.ticketsystem.model.KhachHang kh = khachHangRepository.findById(maKH).orElse(null);
-                String email = null;
-                if (kh != null && kh.getNguoiDung() != null) {
-                    email = kh.getNguoiDung().getEmail();
-                }
-
-                if (email != null && !email.trim().isEmpty()) {
-                    // 1. Ghi log XAC_NHAN_DON_HANG
-                    emailService.sendOrderConfirmationEmail(email, dh);
-
-                    // 2. Ghi log QR_CODE cho từng vé mới tạo
-                    List<Ve> listVe = veRepository.findByMaDonHang(orderId);
-                    for (Ve ve : listVe) {
-                        emailService.sendTicketQREmail(email, ve);
-                    }
-                } else {
-                    System.err.println("Cảnh báo: Không tìm thấy email cho khách hàng: " + maKH + ". Không thực hiện gửi email.");
-                }
-            } catch (Exception e) {
-                System.err.println("Cảnh báo: Lỗi khi xử lý ghi log email: " + e.getMessage());
-                e.printStackTrace();
+        // Gửi email giả lập (LICHSUGUI_EMAIL & console)
+        try {
+            com.dede.ticketsystem.model.KhachHang kh = khachHangRepository.findById(dh.getMaKH()).orElse(null);
+            String email = null;
+            if (kh != null && kh.getNguoiDung() != null) {
+                email = kh.getNguoiDung().getEmail();
             }
-        } else {
-            gd.setTrangThaiGD("Thất bại");
-            gd.setGhiChuLoi("Giao dịch giả lập thất bại.");
-            giaoDichThanhToanRepository.save(gd);
 
-            // Hướng B: Giữ DONHANG ở "Chờ thanh toán" nếu còn thời gian để retry
-            throw new RuntimeException("Thanh toán thất bại! Vui lòng thử lại.");
+            if (email != null && !email.trim().isEmpty()) {
+                // 1. Ghi log XAC_NHAN_DON_HANG
+                emailService.sendOrderConfirmationEmail(email, dh);
+
+                // 2. Ghi log QR_CODE cho từng vé mới tạo
+                List<Ve> listVe = veRepository.findByMaDonHang(orderId);
+                for (Ve ve : listVe) {
+                    emailService.sendTicketQREmail(email, ve);
+                }
+            } else {
+                System.err.println("Cảnh báo: Không tìm thấy email cho khách hàng: " + dh.getMaKH() + ". Không thực hiện gửi email.");
+            }
+        } catch (Exception e) {
+            System.err.println("Cảnh báo: Lỗi khi xử lý ghi log email: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+
+    @Transactional(readOnly = true)
+    public boolean hasSuccessfulPayment(String orderId) {
+        return giaoDichThanhToanRepository.countByMaDonHangAndTrangThaiGD(orderId, "Thành công") > 0;
+    }
+
 
     @Transactional
     public void issueTicketsAfterPaymentSuccess(String orderId) {
@@ -326,6 +293,13 @@ public class BookingService {
             throw new RuntimeException("Đơn hàng không ở trạng thái chờ thanh toán để có thể hủy!");
         }
 
+        // Nhận maSK của đơn hàng từ các ghế đang khóa trước khi nhả
+        String maSK = null;
+        List<Ghe> seats = gheRepository.findByMaPhienKhoa(orderId);
+        if (!seats.isEmpty()) {
+            maSK = seats.get(0).getMaSK();
+        }
+
         // Đổi trạng thái sang Đã hủy
         dh.setTrangThaiDonHang("Đã hủy");
         dh.setCapNhatLanCuoi(now);
@@ -333,6 +307,15 @@ public class BookingService {
 
         // Nhả ghế
         releaseSeats(orderId);
+
+        // Ghi log hành vi BO_GIO_HANG
+        if (maSK != null) {
+            try {
+                logHanhViService.log("BO_GIO_HANG", maSK, maKH, "Web");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     @Transactional
@@ -344,5 +327,39 @@ public class BookingService {
             ghe.setMaPhienKhoa(null);
         }
         gheRepository.saveAll(gheList);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void cancelAndReleaseExpiredOrder(String orderId) {
+        DonHang dh = donHangRepository.findById(orderId).orElse(null);
+        String maKH = null;
+        if (dh != null) {
+            maKH = dh.getMaKH();
+            dh.setTrangThaiDonHang("Đã hủy");
+            dh.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));
+            donHangRepository.save(dh);
+        }
+
+        String maSK = null;
+        List<Ghe> seats = gheRepository.findByMaPhienKhoa(orderId);
+        if (!seats.isEmpty()) {
+            maSK = seats.get(0).getMaSK();
+        }
+
+        releaseSeats(orderId);
+
+        // Ghi log hành vi BO_GIO_HANG
+        if (maSK != null) {
+            try {
+                logHanhViService.log("BO_GIO_HANG", maSK, maKH, "Web");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void saveGiaoDichNewTransaction(GiaoDichThanhToan gd) {
+        giaoDichThanhToanRepository.save(gd);
     }
 }

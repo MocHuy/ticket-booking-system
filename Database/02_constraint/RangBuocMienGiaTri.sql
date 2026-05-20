@@ -13,10 +13,10 @@ ALTER TABLE NGUOIDUNG ADD CONSTRAINT CHK_ND_TrangThai
 
 -- 2. Bảng HANGTHANHVIEN (tái sử dụng)
 ALTER TABLE HANGTHANHVIEN ADD CONSTRAINT CHK_HTV_PhanTram
-    CHECK (PhanTramTienGiam >= 0 AND PhanTramTienGiam <= 100);
+    CHECK (TyLeGiamGia >= 0 AND TyLeGiamGia <= 100);
 
 ALTER TABLE HANGTHANHVIEN ADD CONSTRAINT CHK_HTV_TenHang
-    CHECK (TenHangThanhVien IN ('Không có', 'Đồng', 'Bạc', 'Vàng', 'Kim cương'));
+    CHECK (TenHang IN ('Không có', 'Đồng', 'Bạc', 'Vàng', 'Kim cương'));
 
 -- 3. Bảng KHACHHANG
 ALTER TABLE KHACHHANG ADD CONSTRAINT CHK_KH_TongChiTieu

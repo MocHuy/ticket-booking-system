@@ -44,7 +44,7 @@ public class NguoiDung {
     private Timestamp lanCuoiDangNhap;
 
     @Column(name = "TrangThaiND", length = 50)
-    private String trangThaiND; // 'Hoat_dong' | 'Bi_khoa' | 'Cho_xac_nhan'
+    private String trangThaiND; // "Đang hoạt động", "Không hoạt động", "Bị khóa"
 
     @OneToMany(mappedBy = "nguoiDung", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ChiTietVaiTro> chiTietVaiTros;

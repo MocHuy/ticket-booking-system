@@ -17,6 +17,16 @@ public class AuthInterceptor implements HandlerInterceptor {
         String contextPath = request.getContextPath();
         String relativeUri = uri.substring(contextPath.length());
 
+        // Cho phép các static resources đi qua
+        if (relativeUri.startsWith("/css/") || 
+            relativeUri.startsWith("/js/") || 
+            relativeUri.startsWith("/images/") || 
+            relativeUri.startsWith("/assets/") || 
+            relativeUri.startsWith("/webjars/") || 
+            relativeUri.equals("/favicon.ico")) {
+            return true;
+        }
+
         HttpSession session = request.getSession(false);
         var nguoiDung = session != null ? session.getAttribute("nguoiDung") : null;
         @SuppressWarnings("unchecked")
@@ -105,15 +115,16 @@ public class AuthInterceptor implements HandlerInterceptor {
     }
 
     private boolean isAdminOrganizerRoute(String uri) {
-        return uri.startsWith("/sukien") || 
-               uri.startsWith("/donhang") || 
-               uri.startsWith("/ve") || 
-               uri.startsWith("/baocao") || 
-               uri.startsWith("/taikhoan");
+        return uri.equals("/sukien") || uri.startsWith("/sukien/") ||
+               uri.equals("/donhang") || uri.startsWith("/donhang/") ||
+               uri.equals("/ve") || uri.startsWith("/ve/") ||
+               uri.equals("/baocao") || uri.startsWith("/baocao/") ||
+               uri.equals("/taikhoan") || uri.startsWith("/taikhoan/");
     }
 
     private boolean isStaffRoute(String uri) {
-        return uri.startsWith("/soat-ve") || uri.startsWith("/api/soat-ve/");
+        return uri.equals("/soat-ve") || uri.startsWith("/soat-ve/") || 
+               uri.startsWith("/api/soat-ve/");
     }
 
     private void sendJsonError(HttpServletResponse response, int status, String message, String redirect) throws Exception {
