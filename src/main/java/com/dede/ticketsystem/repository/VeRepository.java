@@ -47,6 +47,14 @@ public interface VeRepository extends JpaRepository<Ve, String> {
 
     Optional<Ve> findByMaQR(String maQR);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM Ve v WHERE v.maVe = :maVe")
+    Optional<Ve> findByMaVeWithLock(@Param("maVe") String maVe);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT v FROM Ve v WHERE v.maQR = :maQR")
+    Optional<Ve> findByMaQRWithLock(@Param("maQR") String maQR);
+
     @Query("SELECT v FROM Ve v JOIN DonHang d ON v.maDonHang = d.maDonHang WHERE v.maVe = :maVe AND d.maKH = :maKH")
     Optional<Ve> findByMaVeAndMaKH(@Param("maVe") String maVe, @Param("maKH") String maKH);
 

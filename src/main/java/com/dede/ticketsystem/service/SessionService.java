@@ -40,6 +40,21 @@ public class SessionService {
         return (String) session.getAttribute("maND");
     }
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
+    public String getCurrentMaNV() {
+        String currentMaND = getCurrentMaND();
+        if (currentMaND == null) {
+            return null;
+        }
+        try {
+            return jdbcTemplate.queryForObject("SELECT MaNV FROM NHANVIEN WHERE MaND = ?", String.class, currentMaND);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     public String getCurrentMaKH() {
         HttpSession session = getSession();
         if (session == null) {

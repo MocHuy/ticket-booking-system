@@ -1,64 +1,67 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
     <meta charset="UTF-8">
     <title>Dề Dê Tickets - Mua Vé Trực Tuyến</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/main.css}">
-    <style>
-        .hero { background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 60px 20px; text-align: center; }
-        .hero h1 { font-size: 40px; margin-bottom: 10px; font-family: 'Times New Roman', Times, serif; }
-        .hero p { font-size: 18px; opacity: 0.9; font-family: 'Times New Roman', Times, serif; }
-        .event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; padding: 40px 20px; max-width: 1200px; margin: 0 auto; }
-        .event-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s; display: flex; flex-direction: column; }
-        .event-card:hover { transform: translateY(-5px); }
-        .event-img { width: 100%; height: 200px; object-fit: cover; background: #e2e8f0; }
-        .event-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-        .event-title { font-size: 18px; font-weight: bold; margin: 0 0 10px; color: #1e3a8a; }
-        .event-meta { font-size: 14px; color: #64748b; margin-bottom: 5px; }
-        .event-meta i { width: 20px; text-align: center; color: #3b82f6; }
-        .btn-buy { margin-top: auto; display: block; text-align: center; background: #2563eb; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
-        .btn-buy:hover { background: #1d4ed8; }
-        .navbar-public { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .navbar-brand { font-size: 24px; font-weight: bold; color: #2563eb; text-decoration: none; }
-        .navbar-menu a { margin-left: 20px; text-decoration: none; color: #1e3a8a; font-weight: bold; }
-    </style>
+    <th:block layout:fragment="page-css">
+        <style>
+            .hero {
+                background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+                color: white;
+                padding: 60px 20px;
+                text-align: center;
+                border-radius: var(--dd-radius-lg);
+                margin: 20px auto;
+                max-width: 1200px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            }
+            .hero h1 { font-size: 40px; margin-bottom: 10px; font-family: 'DM Serif Display', serif; }
+            .hero p { font-size: 18px; opacity: 0.9; font-family: 'DM Sans', sans-serif; }
+            .event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 30px; padding: 20px 20px 40px; max-width: 1200px; margin: 0 auto; }
+            .event-card { background: white; border-radius: var(--dd-radius); overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.2s; display: flex; flex-direction: column; border: 1px solid var(--dd-border); }
+            .event-card:hover { transform: translateY(-5px); border-color: rgba(59,130,246,0.2); }
+            .event-img { width: 100%; height: 200px; object-fit: cover; background: #e2e8f0; }
+            .event-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+            .event-title { font-size: 18px; font-weight: bold; margin: 0 0 10px; color: #1e3a8a; font-family: 'DM Serif Display', serif; }
+            .event-meta { font-size: 14px; color: #64748b; margin-bottom: 5px; }
+            .event-meta i { width: 20px; text-align: center; color: #3b82f6; }
+            .btn-buy { margin-top: auto; display: block; text-align: center; background: #2563eb; color: white; text-decoration: none; padding: 12px; border-radius: 6px; font-weight: bold; transition: background 0.2s; }
+            .btn-buy:hover { background: #1d4ed8; }
+        </style>
+    </th:block>
 </head>
 <body>
-    <nav class="navbar-public">
-        <a href="/" class="navbar-brand"><i class="fa-solid fa-ticket"></i> Dề Dê Tickets</a>
-        <div class="navbar-menu">
-            <a href="/">Trang chủ</a>
-            <a href="/dang-nhap">Đăng nhập Admin</a>
+    <main layout:fragment="content">
+        <div class="hero animate__animated animate__fadeIn">
+            <h1>Khám Phá Các Sự Kiện Nổi Bật</h1>
+            <p>Hệ thống đặt vé trực tuyến an toàn, nhanh chóng và tiện lợi</p>
         </div>
-    </nav>
 
-    <div class="hero">
-        <h1>Khám Phá Các Sự Kiện Nổi Bật</h1>
-        <p>Hệ thống đặt vé trực tuyến an toàn, nhanh chóng và tiện lợi</p>
-    </div>
-
-    <div class="event-grid">
-        <div th:each="sk : ${suKienList}" class="event-card">
-            <img th:src="${sk.hinhAnh != null ? sk.hinhAnh : '/images/default-event.jpg'}" alt="Event Banner" class="event-img" onerror="this.src='https://placehold.co/600x400/e2e8f0/64748b?text=Event'">
-            <div class="event-info">
-                <h3 class="event-title" th:text="${sk.tenSK}">Tên Sự Kiện</h3>
-                <div class="event-meta">
-                    <i class="fa-solid fa-calendar"></i> <span th:text="${sk.thoiGianBatDau != null ? #dates.format(sk.thoiGianBatDau, 'dd/MM/yyyy HH:mm') : 'Đang cập nhật'}">01/01/2026</span>
+        <div class="event-grid">
+            <div th:each="sk : ${suKienList}" class="event-card animate__animated animate__fadeInUp">
+                <img th:src="${sk.hinhAnh != null ? sk.hinhAnh : '/images/default-event.jpg'}" alt="Event Banner" class="event-img" onerror="this.src='https://placehold.co/600x400/e2e8f0/64748b?text=Event'">
+                <div class="event-info">
+                    <h3 class="event-title" th:text="${sk.tenSK}">Tên Sự Kiện</h3>
+                    <div class="event-meta">
+                        <i class="fa-solid fa-calendar"></i> <span th:text="${sk.thoiGianBatDau != null ? #dates.format(sk.thoiGianBatDau, 'dd/MM/yyyy HH:mm') : 'Đang cập nhật'}">01/01/2026</span>
+                    </div>
+                    <div class="event-meta">
+                        <i class="fa-solid fa-location-dot"></i> <span th:text="${sk.maDiaDiem != null ? sk.maDiaDiem : 'Đang cập nhật'}">Hồ Chí Minh</span>
+                    </div>
+                    <div class="event-meta" style="margin-top: 10px; margin-bottom: 20px;">
+                        <span class="dd-badge dd-badge-success" th:text="${sk.trangThaiSK}">Trạng thái</span>
+                    </div>
+                    <a th:href="@{/su-kien/{id}(id=${sk.maSK})}" class="btn-buy">Mua Vé Ngay</a>
                 </div>
-                <div class="event-meta">
-                    <i class="fa-solid fa-location-dot"></i> <span th:text="${sk.maDiaDiem != null ? sk.maDiaDiem : 'Đang cập nhật'}">Hồ Chí Minh</span>
-                </div>
-                <div class="event-meta" style="margin-top: 10px; margin-bottom: 20px;">
-                    <span class="dd-badge dd-badge-success" th:text="${sk.trangThaiSK}">Trạng thái</span>
-                </div>
-                <a th:href="@{/su-kien/{id}(id=${sk.maSK})}" class="btn-buy">Mua Vé Ngay</a>
+            </div>
+            <div th:if="${suKienList == null or suKienList.isEmpty()}" style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #64748b;">
+                <i class="fa-solid fa-calendar-xmark" style="font-size: 40px; margin-bottom: 15px;"></i>
+                <h3>Hiện tại chưa có sự kiện nào đang mở bán.</h3>
             </div>
         </div>
-        <div th:if="${suKienList == null or suKienList.isEmpty()}" style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #64748b;">
-            <i class="fa-solid fa-calendar-xmark" style="font-size: 40px; margin-bottom: 15px;"></i>
-            <h3>Hiện tại chưa có sự kiện nào đang mở bán.</h3>
-        </div>
-    </div>
+    </main>
 </body>
 </html>

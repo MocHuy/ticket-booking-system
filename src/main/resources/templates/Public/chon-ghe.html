@@ -1,283 +1,304 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
     <meta charset="UTF-8">
     <title>Chọn ghế - Dề Dê Tickets</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/main.css}">
-    <style>
-        body { background: #f8fafc; }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; display: flex; gap: 30px; }
-        .main-col { flex: 1; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        .side-col { width: 350px; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: fit-content; position: sticky; top: 20px; }
-        
-        .stage-box { background: #334155; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; letter-spacing: 5px; margin-bottom: 40px; }
-        .seat-map { display: flex; flex-direction: column; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 20px; }
-        .seat-row { display: flex; gap: 8px; align-items: center; }
-        .seat { width: 30px; height: 30px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: transparent; transition: all 0.2s; border: 2px solid transparent; }
-        .seat:hover { filter: brightness(0.9); transform: scale(1.1); color: white; }
-        .seat.selected { border-color: #1e293b; color: white; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
-        .seat.locked { background-color: #cbd5e1 !important; cursor: not-allowed; color: transparent !important; opacity: 0.7; }
-        .seat.booked { background-color: #94a3b8 !important; cursor: not-allowed; color: transparent !important; opacity: 0.5; }
-        
-        .legend { display: flex; gap: 20px; justify-content: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #475569; }
-        .legend-box { width: 20px; height: 20px; border-radius: 4px; }
-        
-        .summary-title { font-size: 20px; color: #1e3a8a; margin: 0 0 20px; font-family: 'Times New Roman', Times, serif; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
-        .selected-seats-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; min-height: 50px; }
-        .selected-seat-tag { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; }
-        
-        .total-box { margin-top: auto; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-        .total-price { font-size: 24px; color: #ef4444; font-weight: bold; text-align: right; margin-bottom: 20px; }
-        .btn-continue { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-        .btn-continue:hover { background: #1d4ed8; }
-        .btn-continue:disabled { background: #94a3b8; cursor: not-allowed; }
-        
-        .navbar-public { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .navbar-brand { font-size: 24px; font-weight: bold; color: #2563eb; text-decoration: none; }
-    </style>
+    <th:block layout:fragment="page-css">
+        <style>
+            body { background: #f8fafc; }
+            .booking-container { max-width: 1200px; margin: 30px auto; padding: 0 20px; display: flex; gap: 30px; }
+            .main-col { flex: 1; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--dd-border); }
+            .side-col { width: 350px; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--dd-border); display: flex; flex-direction: column; height: fit-content; position: sticky; top: 90px; }
+            
+            .stage-box { background: #334155; color: white; text-align: center; padding: 15px; border-radius: 8px; font-weight: bold; letter-spacing: 5px; margin-bottom: 40px; }
+            .seat-map { display: flex; flex-direction: column; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 20px; }
+            .seat-row { display: flex; gap: 8px; align-items: center; }
+            
+            /* Seat States Styles */
+            .seat { width: 30px; height: 30px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: transparent; transition: all 0.2s; border: 1.5px solid rgba(0,0,0,0.08); }
+            .seat:hover { filter: brightness(0.9); transform: scale(1.1); color: white; }
+            
+            /* Đang chọn bởi tôi */
+            .seat.selected { border: 2.5px solid #2563eb !important; box-shadow: 0 0 12px rgba(59,130,246,0.8) !important; transform: scale(1.08); color: #ffffff !important; font-weight: bold; }
+            
+            /* Giữ tạm (bởi người khác) */
+            .seat.locked { background: repeating-linear-gradient(45deg, #fef3c7, #fef3c7 4px, #fde68a 4px, #fde68a 8px) !important; border: 1px solid #f59e0b !important; color: #b45309 !important; cursor: not-allowed; opacity: 0.75; font-size: 8px; }
+            
+            /* Đã bán */
+            .seat.booked { background-color: #e2e8f0 !important; border: 1px solid #cbd5e1 !important; color: #94a3b8 !important; cursor: not-allowed; opacity: 0.6; text-decoration: line-through; }
+            
+            /* Bảo trì */
+            .seat.maintenance { background: repeating-linear-gradient(45deg, #fee2e2, #fee2e2 4px, #fca5a5 4px, #fca5a5 8px) !important; border: 1px solid #ef4444 !important; color: #991b1b !important; cursor: not-allowed; opacity: 0.7; font-size: 8px; }
+            
+            .legend { display: flex; gap: 15px; justify-content: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; }
+            .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #475569; }
+            .legend-box { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+            
+            .summary-title { font-size: 20px; color: #1e3a8a; margin: 0 0 20px; font-family: 'DM Serif Display', serif; font-weight: bold; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
+            .selected-seats-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; min-height: 50px; }
+            .selected-seat-tag { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; }
+            
+            .total-box { margin-top: auto; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+            .total-price { font-size: 24px; color: #ef4444; font-weight: bold; text-align: right; margin-bottom: 20px; }
+            .btn-continue { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+            .btn-continue:hover { background: #1d4ed8; }
+            .btn-continue:disabled { background: #94a3b8; cursor: not-allowed; }
+            @media (max-width: 992px) {
+                .booking-container { flex-direction: column; }
+                .side-col { width: 100%; position: static; }
+            }
+        </style>
+    </th:block>
 </head>
 <body>
-    <nav class="navbar-public">
-        <a href="/" class="navbar-brand"><i class="fa-solid fa-ticket"></i> Dề Dê Tickets</a>
-        <a href="/" style="text-decoration: none; color: #64748b; font-weight: bold;"><i class="fa-solid fa-arrow-left"></i> Quay lại</a>
-    </nav>
-
-    <div class="container">
-        <!-- Cột trái: Sơ đồ ghế -->
-        <div class="main-col">
-            <h2 style="margin-top:0; color: #1e3a8a; font-family: 'Times New Roman', Times, serif;" th:text="${suKien.tenSK}">Tên sự kiện</h2>
-            <p style="color: #64748b; margin-bottom: 30px;"><i class="fa-solid fa-location-dot"></i> <span th:text="${suKien.maDiaDiem}">Địa điểm</span></p>
-            
-            <div class="stage-box">SÂN KHẤU</div>
-            
-            <div class="seat-map" id="seatMapContainer">
-                <!-- Javascript sẽ render ghế ở đây dựa trên dữ liệu -->
-            </div>
-            
-            <div class="legend">
-                <div class="legend-item"><div class="legend-box" style="border: 2px solid #1e293b;"></div> Đang chọn</div>
-                <div class="legend-item"><div class="legend-box" style="background: #cbd5e1;"></div> Giữ tạm</div>
-                <div class="legend-item"><div class="legend-box" style="background: #94a3b8;"></div> Đã bán</div>
-                <div th:each="zone : ${zones}" class="legend-item">
-                    <div class="legend-box" th:style="'background:' + ${zone.mauSacHienThi}"></div>
-                    <span th:text="${zone.tenKhuVuc}">VIP</span>
+    <main layout:fragment="content">
+        <div class="booking-container">
+            <!-- Cột trái: Sơ đồ ghế -->
+            <div class="main-col animate__animated animate__fadeIn">
+                <h2 style="margin-top:0; color: #1e3a8a; font-family: 'DM Serif Display', serif;" th:text="${suKien.tenSK}">Tên sự kiện</h2>
+                <p style="color: #64748b; margin-bottom: 30px;"><i class="fa-solid fa-location-dot me-1"></i> <span th:text="${suKien.maDiaDiem}">Địa điểm</span></p>
+                
+                <div class="stage-box">SÂN KHẤU</div>
+                
+                <div class="seat-map" id="seatMapContainer">
+                    <!-- Javascript sẽ render ghế ở đây dựa trên dữ liệu -->
                 </div>
-            </div>
-        </div>
-        
-        <!-- Cột phải: Thông tin đơn hàng -->
-        <div class="side-col">
-            <h3 class="summary-title">Thông tin đặt vé</h3>
-            
-            <div style="margin-bottom: 15px;">
-                <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Ghế đã chọn:</div>
-                <div class="selected-seats-list" id="selectedSeatsList">
-                    <span style="color: #94a3b8; font-size: 14px; font-style: italic;">Chưa chọn ghế nào</span>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-box" style="border: 2px solid #2563eb; box-shadow: 0 0 6px #3b82f6; background-color: #eff6ff;"></div> Đang chọn
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background: repeating-linear-gradient(45deg, #fef3c7, #fef3c7 3px, #fde68a 3px, #fde68a 6px); border: 1px solid #f59e0b;"></div> Giữ tạm
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background-color: #e2e8f0; border: 1px solid #cbd5e1;"></div> Đã bán
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box" style="background: repeating-linear-gradient(45deg, #fee2e2, #fee2e2 3px, #fca5a5 3px, #fca5a5 6px); border: 1px solid #ef4444;"></div> Bảo trì
+                    </div>
+                    <div th:each="zone : ${zones}" class="legend-item">
+                        <div class="legend-box" th:style="'background:' + ${zone.mauSacHienThi}"></div>
+                        <span th:text="${zone.tenKhuVuc}">VIP</span>
+                    </div>
                 </div>
             </div>
             
-            <div class="total-box">
-                <div style="font-size: 14px; color: #64748b; text-align: right;">Tổng tiền</div>
-                <div class="total-price" id="totalPrice">0 VNĐ</div>
-                <button class="btn-continue" id="btnContinue" disabled onclick="lockSeatsAndCheckout()">TIẾP TỤC THANH TOÁN</button>
+            <!-- Cột phải: Thông tin đơn hàng -->
+            <div class="side-col animate__animated animate__fadeIn">
+                <h3 class="summary-title">Thông tin đặt vé</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Ghế đã chọn:</div>
+                    <div class="selected-seats-list" id="selectedSeatsList">
+                        <span style="color: #94a3b8; font-size: 14px; font-style: italic;">Chưa chọn ghế nào</span>
+                    </div>
+                </div>
+                
+                <div class="total-box">
+                    <div style="font-size: 14px; color: #64748b; text-align: right;">Tổng tiền</div>
+                    <div class="total-price" id="totalPrice">0 VNĐ</div>
+                    <button class="btn-continue" id="btnContinue" disabled onclick="lockSeatsAndCheckout()">TIẾP TỤC THANH TOÁN</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Truyền dữ liệu sang Javascript -->
-    <script th:inline="javascript">
-        const zones = /*[[${zones}]]*/ [];
-        const seats = /*[[${seats}]]*/ [];
-        const maSK = /*[[${suKien.maSK}]]*/ '';
-        const queueToken = /*[[${queueToken}]]*/ '';
-        
-        // Map zone id to zone obj
-        const zoneMap = {};
-        zones.forEach(z => zoneMap[z.maKhuVuc] = z);
-        
-        let selectedSeats = [];
-        
-        // Nhóm ghế theo khu vực và hàng (Đơn giản hóa cho giao diện)
-        // Thực tế backend trả về list danh sách ghế
-        function renderSeats() {
-            const container = document.getElementById('seatMapContainer');
-            container.innerHTML = '';
+        <!-- Truyền dữ liệu sang Javascript -->
+        <script th:inline="javascript">
+            const zones = /*[[${zones}]]*/ [];
+            const seats = /*[[${seats}]]*/ [];
+            const maSK = /*[[${suKien.maSK}]]*/ '';
+            const queueToken = /*[[${queueToken}]]*/ '';
             
-            // Lấy danh sách tên hàng từ tất cả ghế để render (VD: A, B, C)
-            const rowMap = {};
-            seats.forEach(s => {
-                let rowName = s.tenGhe.replace(/[0-9]/g, '');
-                if (!rowMap[rowName]) rowMap[rowName] = [];
-                rowMap[rowName].push(s);
-            });
+            // Map zone id to zone obj
+            const zoneMap = {};
+            zones.forEach(z => zoneMap[z.maKhuVuc] = z);
             
-            // Sắp xếp các hàng
-            const sortedRows = Object.keys(rowMap).sort();
+            let selectedSeats = [];
             
-            sortedRows.forEach(rName => {
-                const rowDiv = document.createElement('div');
-                rowDiv.className = 'seat-row';
+            function renderSeats() {
+                const container = document.getElementById('seatMapContainer');
+                container.innerHTML = '';
                 
-                // Nhãn hàng
-                const label = document.createElement('div');
-                label.style.width = '20px';
-                label.style.fontWeight = 'bold';
-                label.style.color = '#64748b';
-                label.textContent = rName;
-                rowDiv.appendChild(label);
-                
-                // Các ghế trong hàng (sắp xếp theo số)
-                const seatsInRow = rowMap[rName].sort((a, b) => {
-                    let numA = parseInt(a.tenGhe.replace(/[^0-9]/g, '')) || 0;
-                    let numB = parseInt(b.tenGhe.replace(/[^0-9]/g, '')) || 0;
-                    return numA - numB;
+                // Nhóm ghế theo khu vực và hàng
+                const rowMap = {};
+                seats.forEach(s => {
+                    let rowName = s.tenGhe.replace(/[0-9]/g, '');
+                    if (!rowMap[rowName]) rowMap[rowName] = [];
+                    rowMap[rowName].push(s);
                 });
                 
-                seatsInRow.forEach(s => {
-                    const z = zoneMap[s.maKhuVuc];
-                    const seatDiv = document.createElement('div');
-                    seatDiv.className = 'seat';
-                    seatDiv.textContent = s.tenGhe;
-                    seatDiv.title = `${s.tenGhe} - ${z.tenKhuVuc} - ${new Intl.NumberFormat('vi-VN').format(z.giaVe)}đ`;
+                // Sắp xếp các hàng
+                const sortedRows = Object.keys(rowMap).sort();
+                
+                sortedRows.forEach(rName => {
+                    const rowDiv = document.createElement('div');
+                    rowDiv.className = 'seat-row';
                     
-                    if (s.trangThaiGhe === 'Trống') {
-                        seatDiv.style.backgroundColor = z.mauSacHienThi;
-                        seatDiv.onclick = () => toggleSeat(s, seatDiv, z.giaVe);
-                    } else if (s.trangThaiGhe === 'Đang chọn') {
-                        seatDiv.classList.add('locked');
-                    } else {
-                        seatDiv.classList.add('booked');
-                    }
+                    // Nhãn hàng
+                    const label = document.createElement('div');
+                    label.style.width = '20px';
+                    label.style.fontWeight = 'bold';
+                    label.style.color = '#64748b';
+                    label.textContent = rName;
+                    rowDiv.appendChild(label);
                     
-                    rowDiv.appendChild(seatDiv);
-                });
-                
-                container.appendChild(rowDiv);
-            });
-        }
-        
-        function toggleSeat(seatObj, el, price) {
-            const idx = selectedSeats.findIndex(s => s.id === seatObj.maGhe);
-            const z = zoneMap[seatObj.maKhuVuc];
-            if (idx > -1) {
-                // Deselect
-                selectedSeats.splice(idx, 1);
-                el.classList.remove('selected');
-            } else {
-                // Select
-                const currentZoneSelected = selectedSeats.filter(s => s.maKhuVuc === seatObj.maKhuVuc).length;
-                const maxVe = (z.soVeToiDaPerKH != null && z.soVeToiDaPerKH > 0) ? z.soVeToiDaPerKH : 4;
-                
-                if (currentZoneSelected >= maxVe) {
-                    alert(`Khu vực ${z.tenKhuVuc} chỉ cho phép chọn tối đa ${maxVe} ghế!`);
-                    return;
-                }
-                
-                if (selectedSeats.length >= 10) {
-                    alert("Chỉ được chọn tối đa 10 ghế trong một đơn hàng!");
-                    return;
-                }
-                
-                selectedSeats.push({
-                    id: seatObj.maGhe,
-                    name: seatObj.tenGhe,
-                    price: price,
-                    maKhuVuc: seatObj.maKhuVuc
-                });
-                el.classList.add('selected');
-            }
-            updateSummary();
-        }
-        
-        function updateSummary() {
-            const listEl = document.getElementById('selectedSeatsList');
-            const totalEl = document.getElementById('totalPrice');
-            const btn = document.getElementById('btnContinue');
-            
-            if (selectedSeats.length === 0) {
-                listEl.innerHTML = '<span style="color: #94a3b8; font-size: 14px; font-style: italic;">Chưa chọn ghế nào</span>';
-                totalEl.textContent = '0 VNĐ';
-                btn.disabled = true;
-                return;
-            }
-            
-            listEl.innerHTML = '';
-            let total = 0;
-            selectedSeats.forEach(s => {
-                const tag = document.createElement('div');
-                tag.className = 'selected-seat-tag';
-                tag.textContent = s.name;
-                listEl.appendChild(tag);
-                total += s.price;
-            });
-            
-            totalEl.textContent = new Intl.NumberFormat('vi-VN').format(total) + ' VNĐ';
-            btn.disabled = false;
-        }
-        
-        function lockSeatsAndCheckout() {
-            if (selectedSeats.length === 0) return;
-            
-            const btn = document.getElementById('btnContinue');
-            btn.disabled = true;
-            btn.textContent = 'ĐANG GIỮ CHỖ...';
-            
-            const payload = {
-                maGheList: selectedSeats.map(s => s.id),
-                maSK: maSK,
-                queueToken: queueToken
-            };
-            
-            fetch('/api/booking/lock-seats', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-            .then(r => {
-                if (r.status === 403) {
-                    return r.json().then(d => {
-                        alert(d.message || "Bạn cần vào hàng đợi trước khi đặt vé.");
-                        window.location.href = `/hang-doi/${maSK}`;
-                        throw new Error("403 Forbidden");
+                    // Các ghế trong hàng (sắp xếp theo số)
+                    const seatsInRow = rowMap[rName].sort((a, b) => {
+                        let numA = parseInt(a.tenGhe.replace(/[^0-9]/g, '')) || 0;
+                        let numB = parseInt(b.tenGhe.replace(/[^0-9]/g, '')) || 0;
+                        return numA - numB;
                     });
-                }
-                return r.json();
-            })
-            .then(d => {
-                if (d.success === false) {
-                    alert(d.message);
-                    if (d.redirect) {
-                        window.location.href = d.redirect;
-                    } else if (d.message && d.message.includes("hàng đợi")) {
-                        window.location.href = `/hang-doi/${maSK}`;
-                    } else {
-                        location.reload();
-                    }
-                } else if (d.error) {
-                    alert(d.error);
-                    if (d.redirect) {
-                        window.location.href = d.redirect;
-                    } else {
-                        location.reload();
-                    }
+                    
+                    seatsInRow.forEach(s => {
+                        const z = zoneMap[s.maKhuVuc];
+                        const seatDiv = document.createElement('div');
+                        seatDiv.className = 'seat';
+                        seatDiv.textContent = s.tenGhe;
+                        seatDiv.title = `${s.tenGhe} - ${z.tenKhuVuc} - ${new Intl.NumberFormat('vi-VN').format(z.giaVe)}đ`;
+                        
+                        if (s.trangThaiGhe === 'Trống') {
+                            seatDiv.style.backgroundColor = z.mauSacHienThi;
+                            seatDiv.onclick = () => toggleSeat(s, seatDiv, z.giaVe);
+                        } else if (s.trangThaiGhe === 'Đang chọn') {
+                            seatDiv.classList.add('locked');
+                        } else if (s.trangThaiGhe === 'Bảo trì') {
+                            seatDiv.classList.add('maintenance');
+                        } else {
+                            seatDiv.classList.add('booked');
+                        }
+                        
+                        rowDiv.appendChild(seatDiv);
+                    });
+                    
+                    container.appendChild(rowDiv);
+                });
+            }
+            
+            function toggleSeat(seatObj, el, price) {
+                const idx = selectedSeats.findIndex(s => s.id === seatObj.maGhe);
+                const z = zoneMap[seatObj.maKhuVuc];
+                if (idx > -1) {
+                    // Deselect
+                    selectedSeats.splice(idx, 1);
+                    el.classList.remove('selected');
                 } else {
-                    window.location.href = d.redirect;
+                    // Select
+                    const currentZoneSelected = selectedSeats.filter(s => s.maKhuVuc === seatObj.maKhuVuc).length;
+                    const maxVe = (z.soVeToiDaPerKH != null && z.soVeToiDaPerKH > 0) ? z.soVeToiDaPerKH : 4;
+                    
+                    if (currentZoneSelected >= maxVe) {
+                        alert(`Khu vực ${z.tenKhuVuc} chỉ cho phép chọn tối đa ${maxVe} ghế!`);
+                        return;
+                    }
+                    
+                    if (selectedSeats.length >= 10) {
+                        alert("Chỉ được chọn tối đa 10 ghế trong một đơn hàng!");
+                        return;
+                    }
+                    
+                    selectedSeats.push({
+                        id: seatObj.maGhe,
+                        name: seatObj.tenGhe,
+                        price: price,
+                        maKhuVuc: seatObj.maKhuVuc
+                    });
+                    el.classList.add('selected');
                 }
-            })
-            .catch(e => {
-                if (e.message !== "403 Forbidden") {
-                    alert("Lỗi kết nối tới server hoặc thao tác quá nhanh.");
-                    btn.disabled = false;
-                    btn.textContent = 'TIẾP TỤC THANH TOÁN';
+                updateSummary();
+            }
+            
+            function updateSummary() {
+                const listEl = document.getElementById('selectedSeatsList');
+                const totalEl = document.getElementById('totalPrice');
+                const btn = document.getElementById('btnContinue');
+                
+                if (selectedSeats.length === 0) {
+                    listEl.innerHTML = '<span style="color: #94a3b8; font-size: 14px; font-style: italic;">Chưa chọn ghế nào</span>';
+                    totalEl.textContent = '0 VNĐ';
+                    btn.disabled = true;
+                    return;
                 }
+                
+                listEl.innerHTML = '';
+                let total = 0;
+                selectedSeats.forEach(s => {
+                    const tag = document.createElement('div');
+                    tag.className = 'selected-seat-tag';
+                    tag.textContent = s.name;
+                    listEl.appendChild(tag);
+                    total += s.price;
+                });
+                
+                totalEl.textContent = new Intl.NumberFormat('vi-VN').format(total) + ' VNĐ';
+                btn.disabled = false;
+            }
+            
+            function lockSeatsAndCheckout() {
+                if (selectedSeats.length === 0) return;
+                
+                const btn = document.getElementById('btnContinue');
+                btn.disabled = true;
+                btn.textContent = 'ĐANG GIỮ CHỖ...';
+                
+                const payload = {
+                    maGheList: selectedSeats.map(s => s.id),
+                    maSK: maSK,
+                    queueToken: queueToken
+                };
+                
+                fetch('/api/booking/lock-seats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => {
+                    if (r.status === 403) {
+                        return r.json().then(d => {
+                            alert(d.message || "Bạn cần vào hàng đợi trước khi đặt vé.");
+                            window.location.href = `/hang-doi/${maSK}`;
+                            throw new Error("403 Forbidden");
+                        });
+                    }
+                    return r.json();
+                })
+                .then(d => {
+                    if (d.success === false) {
+                        alert(d.message);
+                        if (d.redirect) {
+                            window.location.href = d.redirect;
+                        } else if (d.message && d.message.includes("hàng đợi")) {
+                            window.location.href = `/hang-doi/${maSK}`;
+                        } else {
+                            location.reload();
+                        }
+                    } else if (d.error) {
+                        alert(d.error);
+                        if (d.redirect) {
+                            window.location.href = d.redirect;
+                        } else {
+                            location.reload();
+                        }
+                    } else {
+                        window.location.href = d.redirect;
+                    }
+                })
+                .catch(e => {
+                    if (e.message !== "403 Forbidden") {
+                        alert("Lỗi kết nối tới server hoặc thao tác quá nhanh.");
+                        btn.disabled = false;
+                        btn.textContent = 'TIẾP TỤC THANH TOÁN';
+                    }
+                });
+            }
+            
+            document.addEventListener('DOMContentLoaded', () => {
+                renderSeats();
             });
-        }
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            renderSeats();
-        });
-    </script>
+        </script>
+    </main>
 </body>
 </html>

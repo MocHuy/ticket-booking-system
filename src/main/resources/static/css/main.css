@@ -27,7 +27,7 @@
 html { scroll-behavior: smooth; }
 
 body {
-    font-family: 'Times New Roman', Times, serif;
+    font-family: 'DM Sans', sans-serif;
     background: var(--dd-bg);
     color: var(--dd-text);
     font-size: 15px;

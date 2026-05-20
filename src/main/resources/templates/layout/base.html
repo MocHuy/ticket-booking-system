@@ -31,12 +31,33 @@
             </button>
             <div class="collapse navbar-collapse" id="navMain">
                 <ul class="navbar-nav me-auto">
+                    <!-- Public Links -->
                     <li class="nav-item">
                         <a class="nav-link" th:href="@{/}">
                             <i class="bi bi-house-door me-1"></i>Trang chủ
                         </a>
                     </li>
-                    <!-- Nếu đã đăng nhập và là ADMIN hoặc ORGANIZER -->
+                    <li class="nav-item">
+                        <a class="nav-link" th:href="@{/}">
+                            <i class="bi bi-calendar3 me-1"></i>Sự kiện
+                        </a>
+                    </li>
+                    
+                    <!-- CUSTOMER Links -->
+                    <th:block th:if="${session.nguoiDung != null and (session.roles != null and #lists.contains(session.roles, 'CUSTOMER'))}">
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/ve-cua-toi}">
+                                <i class="bi bi-ticket-perforated me-1"></i>Vé của tôi
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/don-hang-cua-toi}">
+                                <i class="bi bi-receipt me-1"></i>Đơn hàng của tôi
+                            </a>
+                        </li>
+                    </th:block>
+                    
+                    <!-- ADMIN hoặc ORGANIZER Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'ADMIN') or #lists.contains(session.roles, 'ORGANIZER')))}">
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/sukien}">
@@ -64,14 +85,10 @@
                             </a>
                         </li>
                     </th:block>
-                    <!-- Nếu đã đăng nhập và là STAFF hoặc ADMIN -->
+                    
+                    <!-- STAFF hoặc ADMIN Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'STAFF') or #lists.contains(session.roles, 'ADMIN')))}">
-                        <li class="nav-item" th:if="${!#lists.contains(session.roles, 'ADMIN')}"> <!-- Để admin không bị lặp soát vé nếu không thích, hoặc cho hiện cả hai -->
-                            <a class="nav-link" th:href="@{/soat-ve}">
-                                <i class="bi bi-qr-code-scan me-1"></i>Soát vé
-                            </a>
-                        </li>
-                        <li class="nav-item" th:if="${#lists.contains(session.roles, 'ADMIN')}">
+                        <li class="nav-item">
                             <a class="nav-link" th:href="@{/soat-ve}">
                                 <i class="bi bi-qr-code-scan me-1"></i>Soát vé
                             </a>
