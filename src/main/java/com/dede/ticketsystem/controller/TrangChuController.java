@@ -88,19 +88,43 @@ public class TrangChuController {
         return "Public/chi-tiet-su-kien";
     }
 
+    @Autowired
+    private com.dede.ticketsystem.service.QueueService queueService;
+
     @GetMapping("/mua-ve/{maSK}")
-    public String chonGhe(@PathVariable String maSK, Model model, jakarta.servlet.http.HttpServletRequest request) {
+    public String chonGhe(@PathVariable String maSK, 
+                          @RequestParam(required = false) String queueToken,
+                          Model model, 
+                          jakarta.servlet.http.HttpServletRequest request) {
         if (!sessionService.isLoggedIn()) {
-            return "redirect:/dang-nhap?redirect=/mua-ve/" + maSK;
+            String redirectUrl = "/mua-ve/" + maSK;
+            if (queueToken != null && !queueToken.trim().isEmpty()) {
+                redirectUrl += "?queueToken=" + queueToken;
+            }
+            return "redirect:/dang-nhap?redirect=" + redirectUrl;
         }
         if (!sessionService.hasRole("CUSTOMER")) {
             return "redirect:/";
         }
         
+        String maKH = sessionService.getCurrentMaKH();
+        if (maKH == null) {
+            return "redirect:/";
+        }
+
+        // Virtual Queue Check
+        if (queueService.shouldQueue(maSK)) {
+            if (queueToken == null || !queueService.validateQueueToken(queueToken, maKH, maSK)) {
+                return "redirect:/hang-doi/" + maSK;
+            }
+            model.addAttribute("queueToken", queueToken);
+        } else {
+            model.addAttribute("queueToken", queueToken != null ? queueToken : "");
+        }
+        
         // Ghi log hành vi CLICK_DAT_VE
         try {
             String userAgent = request.getHeader("User-Agent");
-            String maKH = sessionService.getCurrentMaKH();
             logHanhViService.log("CLICK_DAT_VE", maSK, maKH, userAgent);
         } catch (Exception e) {
             e.printStackTrace();

@@ -28,5 +28,7 @@ public interface GheRepository extends JpaRepository<Ghe, String> {
     List<Ghe> findAllByIdWithLock(@Param("ids") List<String> ids);
 
     List<Ghe> findByMaPhienKhoa(String maPhienKhoa);
+
+    long countByMaSKAndTrangThaiGhe(String maSK, String trangThaiGhe);
 }
 

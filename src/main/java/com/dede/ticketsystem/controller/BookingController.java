@@ -19,13 +19,28 @@ public class BookingController {
     @Autowired
     private SessionService sessionService;
 
+    @Autowired
+    private com.dede.ticketsystem.service.QueueService queueService;
+
+    @Autowired
+    private com.dede.ticketsystem.service.RateLimitService rateLimitService;
+
     public BookingController(BookingService bookingService) {
         this.bookingService = bookingService;
     }
 
     @PostMapping("/lock-seats")
-    public ResponseEntity<?> lockSeats(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<?> lockSeats(@RequestBody Map<String, Object> payload, jakarta.servlet.http.HttpServletRequest request) {
         try {
+            String maKH = sessionService.getCurrentMaKH();
+            
+            // 1. Rate Limit Check
+            String rateLimitKey = maKH != null ? maKH : request.getRemoteAddr();
+            if (!rateLimitService.isAllowed(rateLimitKey)) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(Map.of("success", false, "message", "Bạn thao tác quá nhanh, vui lòng thử lại sau."));
+            }
+
             if (!sessionService.isLoggedIn()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Bạn cần đăng nhập để đặt vé", "redirect", "/dang-nhap"));
@@ -35,7 +50,6 @@ public class BookingController {
                         .body(Map.of("error", "Bạn không có quyền truy cập chức năng này"));
             }
 
-            String maKH = sessionService.getCurrentMaKH();
             if (maKH == null) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Tài khoản của bạn chưa có hồ sơ Khách hàng. Vui lòng liên hệ Admin.", "redirect", "/dang-nhap"));
@@ -43,13 +57,30 @@ public class BookingController {
 
             List<String> maGheList = (List<String>) payload.get("maGheList");
             String maSK = (String) payload.get("maSK");
+            String queueToken = (String) payload.get("queueToken");
 
+            if (maSK == null || maSK.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Mã sự kiện không được trống!"));
+            }
             if (maGheList == null || maGheList.isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Danh sách ghế chọn không được trống!"));
             }
 
+            // 2. Virtual Queue Verification
+            if (queueService.shouldQueue(maSK)) {
+                if (queueToken == null || !queueService.validateQueueToken(queueToken, maKH, maSK)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("success", false, "message", "Bạn cần vào hàng đợi trước khi đặt vé."));
+                }
+            }
+
             // Gọi logic giữ ghế
             String orderId = bookingService.lockSeats(maGheList, maSK, maKH);
+
+            // 3. Consume token on success
+            if (queueService.shouldQueue(maSK) && queueToken != null) {
+                queueService.consumeToken(queueToken, maKH, maSK);
+            }
             
             return ResponseEntity.ok(Map.of("message", "Đã giữ ghế thành công", "redirect", "/thanh-toan?orderId=" + orderId));
         } catch (Exception e) {

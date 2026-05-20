@@ -91,6 +91,7 @@
         const zones = /*[[${zones}]]*/ [];
         const seats = /*[[${seats}]]*/ [];
         const maSK = /*[[${suKien.maSK}]]*/ '';
+        const queueToken = /*[[${queueToken}]]*/ '';
         
         // Map zone id to zone obj
         const zoneMap = {};
@@ -225,7 +226,8 @@
             
             const payload = {
                 maGheList: selectedSeats.map(s => s.id),
-                maSK: maSK
+                maSK: maSK,
+                queueToken: queueToken
             };
             
             fetch('/api/booking/lock-seats', {
@@ -233,19 +235,43 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.status === 403) {
+                    return r.json().then(d => {
+                        alert(d.message || "Bạn cần vào hàng đợi trước khi đặt vé.");
+                        window.location.href = `/hang-doi/${maSK}`;
+                        throw new Error("403 Forbidden");
+                    });
+                }
+                return r.json();
+            })
             .then(d => {
-                if (d.error) {
+                if (d.success === false) {
+                    alert(d.message);
+                    if (d.redirect) {
+                        window.location.href = d.redirect;
+                    } else if (d.message && d.message.includes("hàng đợi")) {
+                        window.location.href = `/hang-doi/${maSK}`;
+                    } else {
+                        location.reload();
+                    }
+                } else if (d.error) {
                     alert(d.error);
-                    location.reload();
+                    if (d.redirect) {
+                        window.location.href = d.redirect;
+                    } else {
+                        location.reload();
+                    }
                 } else {
                     window.location.href = d.redirect;
                 }
             })
             .catch(e => {
-                alert("Lỗi kết nối tới server");
-                btn.disabled = false;
-                btn.textContent = 'TIẾP TỤC THANH TOÁN';
+                if (e.message !== "403 Forbidden") {
+                    alert("Lỗi kết nối tới server hoặc thao tác quá nhanh.");
+                    btn.disabled = false;
+                    btn.textContent = 'TIẾP TỤC THANH TOÁN';
+                }
             });
         }
         

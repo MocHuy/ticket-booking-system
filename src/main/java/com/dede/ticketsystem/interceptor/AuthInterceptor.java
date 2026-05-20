@@ -111,7 +111,9 @@ public class AuthInterceptor implements HandlerInterceptor {
                uri.equals("/ve-cua-toi") ||
                uri.startsWith("/ve-cua-toi/") ||
                uri.equals("/don-hang-cua-toi") ||
-               uri.startsWith("/don-hang-cua-toi/");
+               uri.startsWith("/don-hang-cua-toi/") ||
+               uri.startsWith("/hang-doi/") ||
+               uri.startsWith("/api/hang-doi/status");
     }
 
     private boolean isAdminOrganizerRoute(String uri) {
@@ -119,7 +121,8 @@ public class AuthInterceptor implements HandlerInterceptor {
                uri.equals("/donhang") || uri.startsWith("/donhang/") ||
                uri.equals("/ve") || uri.startsWith("/ve/") ||
                uri.equals("/baocao") || uri.startsWith("/baocao/") ||
-               uri.equals("/taikhoan") || uri.startsWith("/taikhoan/");
+               uri.equals("/taikhoan") || uri.startsWith("/taikhoan/") ||
+               uri.startsWith("/api/hang-doi/allow-next");
     }
 
     private boolean isStaffRoute(String uri) {

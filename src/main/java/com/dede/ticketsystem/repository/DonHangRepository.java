@@ -34,5 +34,12 @@ public interface DonHangRepository extends JpaRepository<DonHang, String> {
     List<DonHang> findExpiredPendingOrders(@Param("now") Timestamp now);
 
     List<DonHang> findByMaKHOrderByThoiGianDatDesc(String maKH);
+
+    @Query("SELECT COUNT(DISTINCT d.maDonHang) " +
+           "FROM DonHang d, Ghe g " +
+           "WHERE g.maPhienKhoa = d.maDonHang " +
+           "AND g.maSK = :maSK " +
+           "AND d.trangThaiDonHang = 'Chờ thanh toán'")
+    long countPendingOrdersByMaSK(@Param("maSK") String maSK);
 }
 
