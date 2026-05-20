@@ -22,10 +22,26 @@ public interface VeRepository extends JpaRepository<Ve, String> {
 
     boolean existsByMaQR(String maQR);
 
+    boolean existsByMaVe(String maVe);
+
+    boolean existsByMaDonHangAndMaGhe(String maDonHang, String maGhe);
+
+    List<Ve> findByMaDonHang(String maDonHang);
+
     @Query("SELECT v FROM Ve v WHERE v.maSK = :maSK AND v.maDonHang = :maDonHang")
     List<Ve> findAvailableTickets(@Param("maSK") String maSK, @Param("maDonHang") String maDonHang, org.springframework.data.domain.Pageable pageable);
 
     Ve findByMaGhe(String maGhe);
 
     List<Ve> findByMaSK(String maSK);
+
+    @Query("SELECT COUNT(v) FROM Ve v JOIN DonHang d ON v.maDonHang = d.maDonHang " +
+           "WHERE d.maKH = :maKH AND v.maSK = :maSK " +
+           "AND v.maGhe IN (SELECT g.maGhe FROM Ghe g WHERE g.maKhuVuc = :maKhuVuc) " +
+           "AND d.trangThaiDonHang = 'Đã thanh toán'")
+    long countBoughtTicketsByKHAndSKAndKhuVuc(
+            @Param("maKH") String maKH,
+            @Param("maSK") String maSK,
+            @Param("maKhuVuc") String maKhuVuc);
 }
+

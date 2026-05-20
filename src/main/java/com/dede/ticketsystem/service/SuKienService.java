@@ -57,6 +57,22 @@ public class SuKienService {
     }
 
     public SuKien taoSuKien(SuKienDTO dto) {
+        if (dto.getTenSK() == null || dto.getTenSK().trim().isEmpty()) {
+            throw new RuntimeException("Tên sự kiện không được để trống.");
+        }
+
+        Timestamp batDau = parseTimestamp(dto.getThoiGianBatDau());
+        Timestamp ketThuc = parseTimestamp(dto.getThoiGianKetThuc());
+        Timestamp dongBan = parseTimestamp(dto.getThoiGianDongBan());
+
+        if (batDau != null && ketThuc != null && !ketThuc.after(batDau)) {
+            throw new RuntimeException("Thời gian kết thúc phải sau thời gian bắt đầu.");
+        }
+
+        if (dongBan != null && batDau != null && dongBan.after(batDau)) {
+            throw new RuntimeException("Thời gian đóng bán phải trước hoặc bằng thời gian bắt đầu.");
+        }
+
         SuKien sk = new SuKien();
 
         if (dto.getMaSK() == null || dto.getMaSK().trim().isEmpty()) {
@@ -75,10 +91,10 @@ public class SuKienService {
         sk.setMoTaNgan(dto.getMoTaNgan());
         sk.setTags(dto.getTags());
 
-        sk.setThoiGianBatDau(parseTimestamp(dto.getThoiGianBatDau()));
-        sk.setThoiGianKetThuc(parseTimestamp(dto.getThoiGianKetThuc()));
+        sk.setThoiGianBatDau(batDau);
+        sk.setThoiGianKetThuc(ketThuc);
         sk.setThoiGianMoBan(parseTimestamp(dto.getThoiGianMoBan()));
-        sk.setThoiGianDongBan(parseTimestamp(dto.getThoiGianDongBan()));
+        sk.setThoiGianDongBan(dongBan);
 
         sk.setTongSoVe(dto.getTongSoVe() == null ? 0 : dto.getTongSoVe());
         sk.setSoVeDaBan(0);
@@ -97,20 +113,36 @@ public class SuKienService {
     }
 
     public SuKien capNhatSuKien(String maSK, SuKienDTO dto) {
+        if (dto.getTenSK() == null || dto.getTenSK().trim().isEmpty()) {
+            throw new RuntimeException("Tên sự kiện không được để trống.");
+        }
+
+        Timestamp batDau = parseTimestamp(dto.getThoiGianBatDau());
+        Timestamp ketThuc = parseTimestamp(dto.getThoiGianKetThuc());
+        Timestamp dongBan = parseTimestamp(dto.getThoiGianDongBan());
+
+        if (batDau != null && ketThuc != null && !ketThuc.after(batDau)) {
+            throw new RuntimeException("Thời gian kết thúc phải sau thời gian bắt đầu.");
+        }
+
+        if (dongBan != null && batDau != null && dongBan.after(batDau)) {
+            throw new RuntimeException("Thời gian đóng bán phải trước hoặc bằng thời gian bắt đầu.");
+        }
+
         SuKien sk = suKienRepository.findById(maSK)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sự kiện: " + maSK));
 
-        if (dto.getTenSK() != null) sk.setTenSK(dto.getTenSK());
+        sk.setTenSK(dto.getTenSK());
         if (dto.getMoTa() != null) sk.setMoTa(dto.getMoTa());
         if (dto.getHinhAnh() != null) sk.setHinhAnh(dto.getHinhAnh());
         if (dto.getHinhAnhThumb() != null) sk.setHinhAnhThumb(dto.getHinhAnhThumb());
         if (dto.getMoTaNgan() != null) sk.setMoTaNgan(dto.getMoTaNgan());
         if (dto.getTags() != null) sk.setTags(dto.getTags());
 
-        if (dto.getThoiGianBatDau() != null) sk.setThoiGianBatDau(parseTimestamp(dto.getThoiGianBatDau()));
-        if (dto.getThoiGianKetThuc() != null) sk.setThoiGianKetThuc(parseTimestamp(dto.getThoiGianKetThuc()));
-        if (dto.getThoiGianMoBan() != null) sk.setThoiGianMoBan(parseTimestamp(dto.getThoiGianMoBan()));
-        if (dto.getThoiGianDongBan() != null) sk.setThoiGianDongBan(parseTimestamp(dto.getThoiGianDongBan()));
+        sk.setThoiGianBatDau(batDau);
+        sk.setThoiGianKetThuc(ketThuc);
+        sk.setThoiGianMoBan(parseTimestamp(dto.getThoiGianMoBan()));
+        sk.setThoiGianDongBan(dongBan);
 
         if (dto.getTongSoVe() != null) sk.setTongSoVe(dto.getTongSoVe());
         if (dto.getTrangThaiSK() != null) sk.setTrangThaiSK(dto.getTrangThaiSK());
@@ -139,10 +171,14 @@ public class SuKienService {
         SuKien sk = suKienRepository.findById(maSK)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sự kiện: " + maSK));
 
+        List<Ve> oldVe = veRepository.findByMaSK(maSK);
+        boolean hasSoldTickets = oldVe.stream().anyMatch(v -> v.getMaDonHang() != null && !v.getMaDonHang().trim().isEmpty());
+        if (hasSoldTickets) {
+            throw new RuntimeException("Không thể thiết lập lại sơ đồ ghế vì sự kiện đã phát sinh vé bán.");
+        }
+
         try {
-            // 1. Delete existing if any (simplification for reset map)
-            List<Ve> oldVe = veRepository.findByMaSK(maSK);
-            System.out.println("DEBUG: Found " + oldVe.size() + " old tickets");
+            System.out.println("DEBUG: Found " + oldVe.size() + " old tickets (none sold)");
             List<Ghe> oldGhe = gheRepository.findByMaSK(maSK);
             System.out.println("DEBUG: Found " + oldGhe.size() + " old seats");
             List<KhuVuc> oldKhuVuc = khuVucRepository.findByMaSK(maSK);
@@ -163,7 +199,6 @@ public class SuKienService {
 
         List<KhuVuc> dsKhuVuc = new ArrayList<>();
         List<Ghe> dsGhe = new ArrayList<>();
-        List<Ve> dsVe = new ArrayList<>();
 
         char[] rowLabels = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
 
@@ -171,8 +206,13 @@ public class SuKienService {
             for (int k = 0; k < dto.getDanhSachKhuVuc().size(); k++) {
                 ThietLapSanKhauDTO.KhuVucDTO kvDto = dto.getDanhSachKhuVuc().get(k);
 
-                String maKhuVuc = "KV-" + System.currentTimeMillis() + "-" + k;
-                KhuVuc kv = new KhuVuc(maKhuVuc, kvDto.getTenKhuVuc(), kvDto.getGiaVe(), kvDto.getSoHang(), kvDto.getSoGheMoiHang(), kvDto.getMauSac(), maSK);
+                String maKhuVuc = maSK + "-KV" + (k + 1);
+                int soGheToiDa = kvDto.getSoHang() * kvDto.getSoGheMoiHang();
+                int soVeToiDaPerKH = kvDto.getSoVeToiDaPerKH() != null ? kvDto.getSoVeToiDaPerKH() : 4;
+                
+                KhuVuc kv = new KhuVuc(maKhuVuc, kvDto.getTenKhuVuc(), kvDto.getMauSacHienThi(), soGheToiDa, 0, soVeToiDaPerKH, kvDto.getGiaVe(), "Đang bán", maSK);
+                kv.setSoHang(kvDto.getSoHang());
+                kv.setSoGheMoiHang(kvDto.getSoGheMoiHang());
                 dsKhuVuc.add(kv);
 
                 for (int i = 0; i < kvDto.getSoHang(); i++) {
@@ -180,22 +220,11 @@ public class SuKienService {
                     if (i >= rowLabels.length) rowName = rowName + (i / rowLabels.length);
 
                     for (int j = 1; j <= kvDto.getSoGheMoiHang(); j++) {
-                        String maGhe = maKhuVuc + "-" + rowName + j;
-                        String tenGhe = rowName + j;
+                        String tenGhe = rowName + String.format("%02d", j);
+                        String maGhe = maSK + "-" + maKhuVuc + "-" + tenGhe;
 
-                        Ghe ghe = new Ghe(maGhe, tenGhe, "Trống", maKhuVuc, maSK);
+                        Ghe ghe = new Ghe(maGhe, tenGhe, rowName, j, "Trống", maKhuVuc, maSK);
                         dsGhe.add(ghe);
-
-                        Ve ve = new Ve();
-                        ve.setMaVe("VE-" + UUID.randomUUID().toString().substring(0, 8) + "-" + maGhe);
-                        ve.setMaQR(UUID.randomUUID().toString());
-                        ve.setGiaVe(kvDto.getGiaVe());
-                        ve.setTrangThaiVe("Chưa bán");
-                        ve.setThoiGianPhat(new Timestamp(System.currentTimeMillis()));
-                        ve.setMaSK(maSK);
-                        ve.setMaGhe(maGhe);
-                        ve.setMaDonHang(null);
-                        dsVe.add(ve);
 
                         totalTickets++;
                     }
@@ -205,7 +234,6 @@ public class SuKienService {
 
         khuVucRepository.saveAll(dsKhuVuc);
         gheRepository.saveAll(dsGhe);
-        veRepository.saveAll(dsVe);
 
         sk.setTongSoVe(totalTickets);
         sk.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));

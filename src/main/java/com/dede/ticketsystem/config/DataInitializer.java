@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -28,18 +30,22 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        if (vaiTroRepository.count() == 0) {
-            VaiTro vaiTroAdmin = VaiTro.builder()
-                    .maVaiTro("VT01")
-                    .tenVaiTro("ADMIN")
-                    .moTa("Quản trị viên hệ thống")
-                    .build();
-            vaiTroRepository.save(vaiTroAdmin);
+        List<VaiTro> defaultRoles = Arrays.asList(
+            VaiTro.builder().maVaiTro("ADMIN").tenVaiTro("ADMIN").moTa("Quản trị viên hệ thống").build(),
+            VaiTro.builder().maVaiTro("CUSTOMER").tenVaiTro("CUSTOMER").moTa("Khách hàng").build(),
+            VaiTro.builder().maVaiTro("STAFF").tenVaiTro("STAFF").moTa("Nhân viên").build(),
+            VaiTro.builder().maVaiTro("ORGANIZER").tenVaiTro("ORGANIZER").moTa("Ban tổ chức").build()
+        );
+
+        for (VaiTro r : defaultRoles) {
+            if (!vaiTroRepository.existsById(r.getMaVaiTro())) {
+                vaiTroRepository.save(r);
+            }
         }
 
-        if (nguoiDungRepository.count() == 0) {
+        if (!nguoiDungRepository.existsById("ND001")) {
 
-            VaiTro adminRole = vaiTroRepository.findById("VT01").orElse(null);
+            VaiTro adminRole = vaiTroRepository.findById("ADMIN").orElse(null);
 
             if (adminRole != null) {
 
@@ -47,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                         .maND("ND001")
                         .tenTaiKhoan("admin")
                         .matKhauMaHoa(passwordEncoder.encode("123456"))
-                        .trangThaiND("Hoat_dong")
+                        .trangThaiND("Đang hoạt động")
                         .thoiGianTao(new Timestamp(System.currentTimeMillis()))
                         .chiTietVaiTros(new ArrayList<>())
                         .build();
@@ -56,7 +62,7 @@ public class DataInitializer implements CommandLineRunner {
                 chiTiet.setNguoiDung(admin);
                 chiTiet.setVaiTro(adminRole);
                 chiTiet.setMaND(admin.getMaND());
-                chiTiet.setMaVaiTro("VT01");
+                chiTiet.setMaVaiTro("ADMIN");
 
                 admin.getChiTietVaiTros().add(chiTiet);
 
@@ -65,4 +71,4 @@ public class DataInitializer implements CommandLineRunner {
             }
         }
     }
-}
+}

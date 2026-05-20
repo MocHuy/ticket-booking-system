@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.sql.Timestamp;
 
 @Entity
-@Table(name = "GHE")
+@Table(name = "GHENGOI")
 public class Ghe {
 
     @Id
@@ -14,8 +14,14 @@ public class Ghe {
     @Column(name = "TenGhe", length = 50)
     private String tenGhe;
 
-    @Column(name = "TrangThai", length = 50)
-    private String trangThai; // Trống, Đã đặt, Đang giữ
+    @Column(name = "HangGhe", length = 10)
+    private String hangGhe;
+
+    @Column(name = "CotGhe")
+    private Integer cotGhe;
+
+    @Column(name = "TrangThaiGhe", length = 50)
+    private String trangThaiGhe; // Trống, Đang chọn, Đã bán, Bảo trì
 
     @Column(name = "MaKhuVuc", length = 50)
     private String maKhuVuc;
@@ -23,19 +29,21 @@ public class Ghe {
     @Column(name = "MaSK", length = 50)
     private String maSK;
 
-    @Column(name = "ThoiGianGiu")
-    private Timestamp thoiGianGiu;
+    @Column(name = "ThoiGianKhoaTam")
+    private Timestamp thoiGianKhoaTam;
 
-    @Column(name = "MaKHDangGiu", length = 50)
-    private String maKHDangGiu;
+    @Column(name = "MaPhienKhoa", length = 50)
+    private String maPhienKhoa;
 
     // Constructors
     public Ghe() {}
 
-    public Ghe(String maGhe, String tenGhe, String trangThai, String maKhuVuc, String maSK) {
+    public Ghe(String maGhe, String tenGhe, String hangGhe, Integer cotGhe, String trangThaiGhe, String maKhuVuc, String maSK) {
         this.maGhe = maGhe;
         this.tenGhe = tenGhe;
-        this.trangThai = trangThai;
+        this.hangGhe = hangGhe;
+        this.cotGhe = cotGhe;
+        this.trangThaiGhe = trangThaiGhe;
         this.maKhuVuc = maKhuVuc;
         this.maSK = maSK;
     }
@@ -47,8 +55,14 @@ public class Ghe {
     public String getTenGhe() { return tenGhe; }
     public void setTenGhe(String tenGhe) { this.tenGhe = tenGhe; }
 
-    public String getTrangThai() { return trangThai; }
-    public void setTrangThai(String trangThai) { this.trangThai = trangThai; }
+    public String getHangGhe() { return hangGhe; }
+    public void setHangGhe(String hangGhe) { this.hangGhe = hangGhe; }
+
+    public Integer getCotGhe() { return cotGhe; }
+    public void setCotGhe(Integer cotGhe) { this.cotGhe = cotGhe; }
+
+    public String getTrangThaiGhe() { return trangThaiGhe; }
+    public void setTrangThaiGhe(String trangThaiGhe) { this.trangThaiGhe = trangThaiGhe; }
 
     public String getMaKhuVuc() { return maKhuVuc; }
     public void setMaKhuVuc(String maKhuVuc) { this.maKhuVuc = maKhuVuc; }
@@ -56,9 +70,9 @@ public class Ghe {
     public String getMaSK() { return maSK; }
     public void setMaSK(String maSK) { this.maSK = maSK; }
 
-    public Timestamp getThoiGianGiu() { return thoiGianGiu; }
-    public void setThoiGianGiu(Timestamp thoiGianGiu) { this.thoiGianGiu = thoiGianGiu; }
+    public Timestamp getThoiGianKhoaTam() { return thoiGianKhoaTam; }
+    public void setThoiGianKhoaTam(Timestamp thoiGianKhoaTam) { this.thoiGianKhoaTam = thoiGianKhoaTam; }
 
-    public String getMaKHDangGiu() { return maKHDangGiu; }
-    public void setMaKHDangGiu(String maKHDangGiu) { this.maKHDangGiu = maKHDangGiu; }
+    public String getMaPhienKhoa() { return maPhienKhoa; }
+    public void setMaPhienKhoa(String maPhienKhoa) { this.maPhienKhoa = maPhienKhoa; }
 }

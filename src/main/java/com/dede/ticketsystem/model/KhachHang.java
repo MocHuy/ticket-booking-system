@@ -1,6 +1,8 @@
 package com.dede.ticketsystem.model;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 
 @Entity
 @Table(name = "KHACHHANG")
@@ -10,18 +12,31 @@ public class KhachHang {
     @Column(name = "MAKH", length = 50)
     private String maKH;
 
-    @Column(name = "HOTEN")
-    private String hoTen;
+    @Column(name = "HOTENKH", length = 100)
+    private String hoTenKH;
 
-    @Column(name = "SDT")
-    private String sdt;
+    @Column(name = "TONGCHITIEU")
+    private BigDecimal tongChiTieu;
 
-    @Column(name = "EMAIL")
-    private String email;
+    @Column(name = "CAPNHATLANCUOI")
+    private Timestamp capNhatLanCuoi;
+
+    @Column(name = "MAHANGTHANHVIEN", length = 50)
+    private String maHangThanhVien;
 
     @OneToOne
     @JoinColumn(name = "MAND")
     private NguoiDung nguoiDung;
+
+    // Các field cũ không có trong DB gốc, đánh dấu @Transient để tránh lỗi compile nếu UI dùng
+    @Transient
+    private String hoTen;
+
+    @Transient
+    private String sdt;
+
+    @Transient
+    private String email;
 
     public KhachHang() {
     }
@@ -34,28 +49,37 @@ public class KhachHang {
         this.maKH = maKH;
     }
 
-    public String getHoTen() {
-        return hoTen;
+    public String getHoTenKH() {
+        return hoTenKH;
     }
 
-    public void setHoTen(String hoTen) {
-        this.hoTen = hoTen;
+    public void setHoTenKH(String hoTenKH) {
+        this.hoTenKH = hoTenKH;
+        this.hoTen = hoTenKH; // Đồng bộ sang field cũ
     }
 
-    public String getSdt() {
-        return sdt;
+    public BigDecimal getTongChiTieu() {
+        return tongChiTieu;
     }
 
-    public void setSdt(String sdt) {
-        this.sdt = sdt;
+    public void setTongChiTieu(BigDecimal tongChiTieu) {
+        this.tongChiTieu = tongChiTieu;
     }
 
-    public String getEmail() {
-        return email;
+    public Timestamp getCapNhatLanCuoi() {
+        return capNhatLanCuoi;
     }
 
-    public void setEmail(String email) {
-        this.email = email;
+    public void setCapNhatLanCuoi(Timestamp capNhatLanCuoi) {
+        this.capNhatLanCuoi = capNhatLanCuoi;
+    }
+
+    public String getMaHangThanhVien() {
+        return maHangThanhVien;
+    }
+
+    public void setMaHangThanhVien(String maHangThanhVien) {
+        this.maHangThanhVien = maHangThanhVien;
     }
 
     public NguoiDung getNguoiDung() {
@@ -64,5 +88,33 @@ public class KhachHang {
 
     public void setNguoiDung(NguoiDung nguoiDung) {
         this.nguoiDung = nguoiDung;
+    }
+
+    // Tương thích ngược với field cũ
+    public String getHoTen() {
+        return hoTenKH != null ? hoTenKH : hoTen;
+    }
+
+    public void setHoTen(String hoTen) {
+        this.hoTen = hoTen;
+        if (this.hoTenKH == null) {
+            this.hoTenKH = hoTen;
+        }
+    }
+
+    public String getSdt() {
+        return sdt != null ? sdt : (nguoiDung != null ? nguoiDung.getSdt() : null);
+    }
+
+    public void setSdt(String sdt) {
+        this.sdt = sdt;
+    }
+
+    public String getEmail() {
+        return email != null ? email : (nguoiDung != null ? nguoiDung.getEmail() : null);
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

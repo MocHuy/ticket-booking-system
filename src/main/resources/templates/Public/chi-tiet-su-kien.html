@@ -56,16 +56,29 @@
                     <h3 style="margin-top: 0; color: #1e3a8a;">Bảng Giá Vé</h3>
                     <div th:each="zone : ${zones}" class="zone-card">
                         <div style="display:flex; align-items:center; gap: 10px;">
-                            <div th:style="'width: 16px; height: 16px; border-radius: 4px; background:' + ${zone.mauSac}"></div>
+                            <div th:style="'width: 16px; height: 16px; border-radius: 4px; background:' + ${zone.mauSacHienThi}"></div>
                             <strong th:text="${zone.tenKhuVuc}">VIP</strong>
                         </div>
-                        <span style="color: #ef4444; font-weight: bold;" th:text="${#numbers.formatDecimal(zone.giaVe, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">1,000,000 VNĐ</span>
+                        <div style="text-align: right;">
+                            <span style="color: #ef4444; font-weight: bold; display: block;" th:text="${#numbers.formatDecimal(zone.giaVe, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">1,000,000 VNĐ</span>
+                            <span style="color: #64748b; font-size: 13px;" th:text="'Còn trống: ' + (${zone.soGheToiDa} - (${zone.soGheDaBan != null ? zone.soGheDaBan : 0})) + '/' + ${zone.soGheToiDa}">Còn trống: 100/100</span>
+                        </div>
                     </div>
                     <div th:if="${zones == null or zones.isEmpty()}" style="color: #64748b; font-style: italic;">Sự kiện này chưa thiết lập sơ đồ ghế và giá vé.</div>
                 </div>
                 
-                <a th:if="${zones != null and !zones.isEmpty()}" th:href="@{/mua-ve/{id}(id=${suKien.maSK})}" class="btn-book" style="margin-top: 20px;">CHỌN GHẾ NGAY</a>
-                <button th:unless="${zones != null and !zones.isEmpty()}" disabled class="btn-book" style="margin-top: 20px; background: #94a3b8; cursor: not-allowed;">CHƯA MỞ BÁN</button>
+                <a th:if="${canBuy and zones != null and !zones.isEmpty()}" th:href="@{/mua-ve/{id}(id=${suKien.maSK})}" class="btn-book" style="margin-top: 20px;">MUA VÉ NGAY</a>
+                <button th:unless="${canBuy and zones != null and !zones.isEmpty()}" disabled class="btn-book" style="margin-top: 20px; background: #94a3b8; cursor: not-allowed;">
+                    <span th:if="${zones == null or zones.isEmpty()}">CHƯA THIẾT LẬP SƠ ĐỒ GHẾ</span>
+                    <span th:unless="${zones == null or zones.isEmpty()}">
+                        <span th:if="${suKien.trangThaiSK == 'Đang mở bán'}">HẾT HẠN MỞ BÁN</span>
+                        <span th:if="${suKien.trangThaiSK == 'Chưa mở bán'}">CHƯA MỞ BÁN</span>
+                        <span th:if="${suKien.trangThaiSK == 'Đã kết thúc'}">ĐÃ KẾT THÚC</span>
+                        <span th:if="${suKien.trangThaiSK == 'Đã hủy'}">ĐÃ HỦY</span>
+                        <span th:if="${suKien.trangThaiSK == 'Tạm ngưng'}">TẠM NGƯNG</span>
+                        <span th:if="${suKien.trangThaiSK != 'Đang mở bán' and suKien.trangThaiSK != 'Chưa mở bán' and suKien.trangThaiSK != 'Đã kết thúc' and suKien.trangThaiSK != 'Đã hủy' and suKien.trangThaiSK != 'Tạm ngưng'}">KHÔNG THỂ MUA VÉ</span>
+                    </span>
+                </button>
             </div>
         </div>
     </div>

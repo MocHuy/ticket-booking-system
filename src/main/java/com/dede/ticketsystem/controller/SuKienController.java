@@ -3,6 +3,8 @@ package com.dede.ticketsystem.controller;
 import com.dede.ticketsystem.model.SuKien;
 import com.dede.ticketsystem.model.SuKienDTO;
 import com.dede.ticketsystem.model.ThietLapSanKhauDTO;
+import com.dede.ticketsystem.model.KhuVuc;
+import com.dede.ticketsystem.model.Ghe;
 import com.dede.ticketsystem.service.SuKienService;
 import com.dede.ticketsystem.repository.KhuVucRepository;
 import com.dede.ticketsystem.repository.GheRepository;
@@ -165,8 +167,24 @@ public class SuKienController {
     @ResponseBody
     public ResponseEntity<?> laySoDoGhe(@PathVariable String maSK) {
         try {
-            List<?> zones = khuVucRepository.findByMaSK(maSK);
-            List<?> seats = gheRepository.findByMaSK(maSK);
+            List<KhuVuc> zones = khuVucRepository.findByMaSK(maSK);
+            List<Ghe> seats = gheRepository.findByMaSK(maSK);
+            for (KhuVuc kv : zones) {
+                java.util.Set<String> rows = new java.util.HashSet<>();
+                int maxCol = 0;
+                for (Ghe g : seats) {
+                    if (g.getMaKhuVuc() != null && g.getMaKhuVuc().equals(kv.getMaKhuVuc())) {
+                        if (g.getHangGhe() != null) {
+                            rows.add(g.getHangGhe());
+                        }
+                        if (g.getCotGhe() != null && g.getCotGhe() > maxCol) {
+                            maxCol = g.getCotGhe();
+                        }
+                    }
+                }
+                kv.setSoHang(rows.size());
+                kv.setSoGheMoiHang(maxCol);
+            }
             return ResponseEntity.ok(Map.of("zones", zones, "seats", seats));
         } catch (Exception e) {
             e.printStackTrace();

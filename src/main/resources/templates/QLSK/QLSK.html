@@ -100,15 +100,15 @@
                     <div class="toolbar-left">
                         <div class="search-wrapper">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="searchInput" placeholder="Tên sự kiện, Mã sự kiện...">
+                            <input type="text" id="searchInput" placeholder="Tên sự kiện, tags, mô tả ngắn..." th:value="${keyword}">
                         </div>
                         <select id="statusFilter" class="filter-select">
                             <option value="">Tất cả trạng thái</option>
-                            <option value="Chưa mở bán">Chưa mở bán</option>
-                            <option value="Đang mở bán">Đang mở bán</option>
-                            <option value="Đã kết thúc">Đã kết thúc</option>
-                            <option value="Đã hủy">Đã hủy</option>
-                            <option value="Tạm ngưng">Tạm ngưng</option>
+                            <option value="Chưa mở bán" th:selected="${trangThaiFilter == 'Chưa mở bán'}">Chưa mở bán</option>
+                            <option value="Đang mở bán" th:selected="${trangThaiFilter == 'Đang mở bán'}">Đang mở bán</option>
+                            <option value="Đã kết thúc" th:selected="${trangThaiFilter == 'Đã kết thúc'}">Đã kết thúc</option>
+                            <option value="Đã hủy" th:selected="${trangThaiFilter == 'Đã hủy'}">Đã hủy</option>
+                            <option value="Tạm ngưng" th:selected="${trangThaiFilter == 'Tạm ngưng'}">Tạm ngưng</option>
                         </select>
                         <button class="btn-filter" onclick="filterTable()">
                             <i class="fa-solid fa-filter"></i> Lọc
@@ -217,6 +217,11 @@
                             <input type="text" id="m_moTaNgan" name="moTaNgan" class="form-control">
                         </div>
 
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Mô tả chi tiết</label>
+                            <textarea id="m_moTa" name="moTa" rows="4" class="form-control" placeholder="Mô tả chi tiết về sự kiện..."></textarea>
+                        </div>
+                        
                         <div class="form-group">
                             <label>Bắt Đầu</label>
                             <input type="datetime-local" id="m_thoiGianBatDau" name="thoiGianBatDau" class="form-control">
@@ -253,6 +258,15 @@
                         <div class="form-group" style="grid-column: 1 / -1;">
                             <label>Link Hình Ảnh</label>
                             <input type="text" id="m_hinhAnh" name="hinhAnh" placeholder="https://..." class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Link Hình Ảnh Thumb</label>
+                            <input type="text" id="m_hinhAnhThumb" name="hinhAnhThumb" placeholder="https://..." class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Tags</label>
+                            <input type="text" id="m_tags" name="tags" placeholder="vd: Concert, Live, EDM" class="form-control">
                         </div>
                         
                         <div class="form-group">
@@ -342,22 +356,16 @@
         }, 3000);
 
         function filterTable() {
-            const kw = document.getElementById('searchInput').value.toLowerCase();
+            const kw = document.getElementById('searchInput').value.trim();
             const st = document.getElementById('statusFilter').value;
-            const rows = document.querySelectorAll('#eventTableBody tr[data-ma]');
-            let visible = 0;
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                const badge = row.querySelector('.badge');
-                const matchKw = kw === '' || text.includes(kw);
-                const matchSt = st === '' || (badge && badge.textContent.trim() === st);
-                row.style.display = (matchKw && matchSt) ? '' : 'none';
-                if (matchKw && matchSt) visible++;
-            });
-            document.querySelector('.pagination-bar b').innerText = visible;
+            window.location.href = '/sukien?keyword=' + encodeURIComponent(kw) + '&trangThai=' + encodeURIComponent(st);
         }
 
-        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                filterTable();
+            }
+        });
 
         const modal = document.getElementById('eventModal');
         const form = document.getElementById('eventForm');
@@ -367,6 +375,9 @@
             form.action = '/sukien/tao-moi';
             form.reset();
             document.getElementById('m_maSK').value = '';
+            document.getElementById('m_moTa').value = '';
+            document.getElementById('m_hinhAnhThumb').value = '';
+            document.getElementById('m_tags').value = '';
             modal.classList.add('open');
         }
 
@@ -388,9 +399,12 @@
                     document.getElementById('m_maSK').value = d.maSK || '';
                     document.getElementById('m_tenSK').value = d.tenSK || '';
                     document.getElementById('m_moTaNgan').value = d.moTaNgan || '';
+                    document.getElementById('m_moTa').value = d.moTa || '';
                     document.getElementById('m_tongSoVe').value = d.tongSoVe || 0;
-                    document.getElementById('m_trangThaiSK').value = d.trangThaiSK || 'Sắp diễn ra';
+                    document.getElementById('m_trangThaiSK').value = d.trangThaiSK || 'Chưa mở bán';
                     document.getElementById('m_hinhAnh').value = d.hinhAnh || '';
+                    document.getElementById('m_hinhAnhThumb').value = d.hinhAnhThumb || '';
+                    document.getElementById('m_tags').value = d.tags || '';
                     document.getElementById('m_maDiaDiem').value = d.maDiaDiem || '';
                     document.getElementById('m_maLoaiSK').value = d.maLoaiSK || '';
                     document.getElementById('m_maNV').value = d.maNV || '';
@@ -436,13 +450,13 @@
                 .then(d => {
                     if (d.zones && d.zones.length > 0) {
                         d.zones.forEach(z => {
-                            addZoneForm(z.tenKhuVuc, z.giaVe, z.soHang, z.soGheMoiHang, z.mauSac);
+                            addZoneForm(z.tenKhuVuc, z.giaVe, z.soHang, z.soGheMoiHang, z.mauSacHienThi, z.soVeToiDaPerKH || 4);
                         });
                         previewStage();
                     } else {
                         // Thêm default
-                        addZoneForm('VIP', 1000000, 3, 10, '#ef4444');
-                        addZoneForm('Standard', 500000, 5, 15, '#3b82f6');
+                        addZoneForm('VIP', 1000000, 3, 10, '#ef4444', 4);
+                        addZoneForm('Standard', 500000, 5, 15, '#3b82f6', 4);
                     }
                     stageModal.classList.add('open');
                 })
@@ -453,7 +467,7 @@
             stageModal.classList.remove('open');
         }
 
-        function addZoneForm(name = '', price = 0, rows = 0, cols = 0, color = '#3b82f6') {
+        function addZoneForm(name = '', price = 0, rows = 0, cols = 0, color = '#3b82f6', maxTickets = 4) {
             const html = `
                 <div class="zone-card" id="zone_card_${zoneCounter}" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -462,7 +476,7 @@
                         <button type="button" onclick="document.getElementById('zone_card_${zoneCounter}').remove()" style="margin-left:10px; background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                     <div style="display:flex; gap: 10px;">
-                        <div style="flex: 1;">
+                        <div style="flex: 1.5;">
                             <label style="font-size:11px; color:#64748b;">Giá vé (VNĐ)</label>
                             <input type="number" class="z-price" value="${price}" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                         </div>
@@ -473,6 +487,10 @@
                         <div style="flex: 1;">
                             <label style="font-size:11px; color:#64748b;">Ghế/hàng</label>
                             <input type="number" class="z-cols" value="${cols}" min="1" max="100" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1.2;">
+                            <label style="font-size:11px; color:#64748b;">Vé tối đa/KH</label>
+                            <input type="number" class="z-max-tickets" value="${maxTickets}" min="1" max="100" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
                         </div>
                     </div>
                 </div>
@@ -561,10 +579,11 @@
             cards.forEach(card => {
                 payload.danhSachKhuVuc.push({
                     tenKhuVuc: card.querySelector('.z-name').value,
-                    mauSac: card.querySelector('.z-color').value,
+                    mauSacHienThi: card.querySelector('.z-color').value,
                     giaVe: parseFloat(card.querySelector('.z-price').value) || 0,
                     soHang: parseInt(card.querySelector('.z-rows').value) || 0,
-                    soGheMoiHang: parseInt(card.querySelector('.z-cols').value) || 0
+                    soGheMoiHang: parseInt(card.querySelector('.z-cols').value) || 0,
+                    soVeToiDaPerKH: parseInt(card.querySelector('.z-max-tickets').value) || 4
                 });
             });
 

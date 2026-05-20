@@ -20,7 +20,8 @@ public class ThietLapSanKhauDTO {
         private BigDecimal giaVe;
         private Integer soHang;
         private Integer soGheMoiHang;
-        private String mauSac;
+        private String mauSacHienThi;
+        private Integer soVeToiDaPerKH;
 
         public String getTenKhuVuc() { return tenKhuVuc; }
         public void setTenKhuVuc(String tenKhuVuc) { this.tenKhuVuc = tenKhuVuc; }
@@ -34,7 +35,10 @@ public class ThietLapSanKhauDTO {
         public Integer getSoGheMoiHang() { return soGheMoiHang; }
         public void setSoGheMoiHang(Integer soGheMoiHang) { this.soGheMoiHang = soGheMoiHang; }
 
-        public String getMauSac() { return mauSac; }
-        public void setMauSac(String mauSac) { this.mauSac = mauSac; }
+        public String getMauSacHienThi() { return mauSacHienThi; }
+        public void setMauSacHienThi(String mauSacHienThi) { this.mauSacHienThi = mauSacHienThi; }
+
+        public Integer getSoVeToiDaPerKH() { return soVeToiDaPerKH; }
+        public void setSoVeToiDaPerKH(Integer soVeToiDaPerKH) { this.soVeToiDaPerKH = soVeToiDaPerKH; }
     }
 }

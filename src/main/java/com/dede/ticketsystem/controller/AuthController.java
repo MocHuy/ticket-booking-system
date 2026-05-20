@@ -1,6 +1,7 @@
 package com.dede.ticketsystem.controller;
 
 import com.dede.ticketsystem.model.NguoiDung;
+import com.dede.ticketsystem.repository.KhachHangRepository;
 import com.dede.ticketsystem.service.AuthService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,21 +10,29 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.Set;
+import java.util.stream.Collectors;
+
 @Controller
 public class AuthController {
 
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private KhachHangRepository khachHangRepository;
+
     @GetMapping("/dang-nhap")
     public String showLogin(
+            @RequestParam(required = false) String redirect,
             @RequestParam(required = false) String redirectUrl,
             HttpSession session,
             Model model) {
         if (session.getAttribute("nguoiDung") != null) {
             return "redirect:/";
         }
-        model.addAttribute("redirectUrl", redirectUrl);
+        String target = (redirect != null && !redirect.isBlank()) ? redirect : redirectUrl;
+        model.addAttribute("redirectUrl", target);
         model.addAttribute("showNavbar", false);
         return "auth/login";
     }
@@ -32,25 +41,52 @@ public class AuthController {
     public String processLogin(
             @RequestParam String tenTaiKhoan,
             @RequestParam String matKhau,
+            @RequestParam(required = false) String redirect,
             @RequestParam(required = false) String redirectUrl,
             HttpSession session,
             Model model) {
         try {
             NguoiDung nguoiDung = authService.dangNhap(tenTaiKhoan, matKhau);
 
+            // Lưu vào HttpSession
             session.setAttribute("nguoiDung", nguoiDung);
-            session.setMaxInactiveInterval(30 * 60);
+            session.setAttribute("maND", nguoiDung.getMaND());
+            session.setAttribute("tenTaiKhoan", nguoiDung.getTenTaiKhoan());
 
-            if (redirectUrl != null && !redirectUrl.isBlank()) {
-                return "redirect:" + redirectUrl;
+            // Lấy danh sách role của user dạng Set<String>
+            Set<String> roles = nguoiDung.getChiTietVaiTros().stream()
+                    .map(ct -> ct.getMaVaiTro())
+                    .collect(Collectors.toSet());
+            session.setAttribute("roles", roles);
+
+            // Nếu user là CUSTOMER thì lấy maKH
+            if (roles.contains("CUSTOMER")) {
+                khachHangRepository.findByMaND(nguoiDung.getMaND())
+                        .ifPresent(kh -> session.setAttribute("maKH", kh.getMaKH()));
             }
 
-            return nguoiDung.isAdmin() ? "redirect:/taikhoan" : "redirect:/taikhoan";
+            session.setMaxInactiveInterval(30 * 60);
+
+            // Hỗ trợ redirect sau đăng nhập
+            String targetRedirect = (redirect != null && !redirect.isBlank()) ? redirect : redirectUrl;
+            if (isValidLocalRedirect(targetRedirect)) {
+                return "redirect:" + targetRedirect;
+            }
+
+            // Redirect mặc định dựa trên role
+            if (roles.contains("ADMIN") || roles.contains("ORGANIZER")) {
+                return "redirect:/sukien";
+            } else if (roles.contains("STAFF")) {
+                return "redirect:/soat-ve";
+            } else {
+                return "redirect:/";
+            }
 
         } catch (Exception e) {
             model.addAttribute("error", e.getMessage());
             model.addAttribute("tenTaiKhoanCu", tenTaiKhoan);
-            model.addAttribute("redirectUrl", redirectUrl);
+            String targetRedirect = (redirect != null && !redirect.isBlank()) ? redirect : redirectUrl;
+            model.addAttribute("redirectUrl", targetRedirect);
             model.addAttribute("showNavbar", false);
             return "auth/login";
         }
@@ -91,10 +127,21 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/dang-xuat")
+    public String logoutGet(HttpSession session, RedirectAttributes redirectAttributes) {
+        session.invalidate();
+        redirectAttributes.addFlashAttribute("success", "Đã đăng xuất thành công.");
+        return "redirect:/";
+    }
+
     @PostMapping("/dang-xuat")
     public String logout(HttpSession session, RedirectAttributes redirectAttributes) {
         session.invalidate();
         redirectAttributes.addFlashAttribute("success", "Đã đăng xuất thành công.");
         return "redirect:/dang-nhap";
+    }
+
+    private boolean isValidLocalRedirect(String path) {
+        return path != null && path.startsWith("/") && !path.startsWith("//");
     }
 }

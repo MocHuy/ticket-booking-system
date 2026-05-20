@@ -1,7 +1,7 @@
 package com.dede.ticketsystem.service;
 
-import com.dede.ticketsystem.model.Ghe;
-import com.dede.ticketsystem.repository.GheRepository;
+import com.dede.ticketsystem.model.DonHang;
+import com.dede.ticketsystem.repository.DonHangRepository;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,30 +12,38 @@ import java.util.List;
 @Component
 public class SeatLockCleanupTask {
 
-    private final GheRepository gheRepository;
+    private final DonHangRepository donHangRepository;
+    private final BookingService bookingService;
 
-    public SeatLockCleanupTask(GheRepository gheRepository) {
-        this.gheRepository = gheRepository;
+    public SeatLockCleanupTask(DonHangRepository donHangRepository, BookingService bookingService) {
+        this.donHangRepository = donHangRepository;
+        this.bookingService = bookingService;
     }
 
     // Chạy mỗi 60 giây (60000 ms)
     @Scheduled(fixedRate = 60000)
     @Transactional
-    public void unlockExpiredSeats() {
-        // 10 phút trước
-        Timestamp tenMinsAgo = new Timestamp(System.currentTimeMillis() - (10 * 60 * 1000));
+    public void cancelExpiredOrders() {
+        Timestamp now = new Timestamp(System.currentTimeMillis());
         
-        // Tìm các ghế Đang giữ và thời gian giữ < 10 phút trước (tức là đã giữ hơn 10 phút)
-        List<Ghe> expiredSeats = gheRepository.findExpiredSeats("Đang giữ", tenMinsAgo);
+        // Tìm các đơn hàng "Chờ thanh toán" đã quá thời gian hết hạn
+        List<DonHang> expiredOrders = donHangRepository.findExpiredPendingOrders(now);
         
-        if (!expiredSeats.isEmpty()) {
-            for (Ghe ghe : expiredSeats) {
-                ghe.setTrangThai("Trống");
-                ghe.setThoiGianGiu(null);
-                ghe.setMaKHDangGiu(null);
+        if (!expiredOrders.isEmpty()) {
+            for (DonHang dh : expiredOrders) {
+                try {
+                    dh.setTrangThaiDonHang("Đã hủy");
+                    dh.setCapNhatLanCuoi(now);
+                    donHangRepository.save(dh);
+                    
+                    // Giải phóng ghế
+                    bookingService.releaseSeats(dh.getMaDonHang());
+                    
+                    System.out.println("[SeatLockCleanupTask] Đã hủy đơn hàng quá hạn: " + dh.getMaDonHang());
+                } catch (Exception e) {
+                    System.err.println("[SeatLockCleanupTask] Lỗi khi hủy đơn hàng quá hạn " + dh.getMaDonHang() + ": " + e.getMessage());
+                }
             }
-            gheRepository.saveAll(expiredSeats);
-            System.out.println("[SeatLockCleanupTask] Đã nhả " + expiredSeats.size() + " ghế hết hạn giữ chỗ.");
         }
     }
 }

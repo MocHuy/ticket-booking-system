@@ -75,7 +75,7 @@ public class NguoiDung {
             return false;
         }
         return this.chiTietVaiTros.stream()
-                .anyMatch(ct -> ct.getVaiTro().getMaVaiTro().equals("ADMIN"));
+                .anyMatch(ct -> "ADMIN".equals(ct.getMaVaiTro()));
     }
 
     // Getters and Setters

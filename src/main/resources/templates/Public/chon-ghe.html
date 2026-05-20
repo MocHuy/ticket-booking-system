@@ -58,10 +58,10 @@
             
             <div class="legend">
                 <div class="legend-item"><div class="legend-box" style="border: 2px solid #1e293b;"></div> Đang chọn</div>
-                <div class="legend-item"><div class="legend-box" style="background: #cbd5e1;"></div> Đang giữ</div>
+                <div class="legend-item"><div class="legend-box" style="background: #cbd5e1;"></div> Giữ tạm</div>
                 <div class="legend-item"><div class="legend-box" style="background: #94a3b8;"></div> Đã bán</div>
                 <div th:each="zone : ${zones}" class="legend-item">
-                    <div class="legend-box" th:style="'background:' + ${zone.mauSac}"></div>
+                    <div class="legend-box" th:style="'background:' + ${zone.mauSacHienThi}"></div>
                     <span th:text="${zone.tenKhuVuc}">VIP</span>
                 </div>
             </div>
@@ -90,6 +90,7 @@
     <script th:inline="javascript">
         const zones = /*[[${zones}]]*/ [];
         const seats = /*[[${seats}]]*/ [];
+        const maSK = /*[[${suKien.maSK}]]*/ '';
         
         // Map zone id to zone obj
         const zoneMap = {};
@@ -101,12 +102,11 @@
         // Thực tế backend trả về list danh sách ghế
         function renderSeats() {
             const container = document.getElementById('seatMapContainer');
+            container.innerHTML = '';
             
             // Lấy danh sách tên hàng từ tất cả ghế để render (VD: A, B, C)
-            // Cấu trúc map: rowMap[rowName] = [seat1, seat2]
             const rowMap = {};
             seats.forEach(s => {
-                // Tên ghế có dạng: "A1", "A2", "VIP-A1". Tách lấy ký tự chữ làm hàng.
                 let rowName = s.tenGhe.replace(/[0-9]/g, '');
                 if (!rowMap[rowName]) rowMap[rowName] = [];
                 rowMap[rowName].push(s);
@@ -141,10 +141,10 @@
                     seatDiv.textContent = s.tenGhe;
                     seatDiv.title = `${s.tenGhe} - ${z.tenKhuVuc} - ${new Intl.NumberFormat('vi-VN').format(z.giaVe)}đ`;
                     
-                    if (s.trangThai === 'Trống') {
-                        seatDiv.style.backgroundColor = z.mauSac;
+                    if (s.trangThaiGhe === 'Trống') {
+                        seatDiv.style.backgroundColor = z.mauSacHienThi;
                         seatDiv.onclick = () => toggleSeat(s, seatDiv, z.giaVe);
-                    } else if (s.trangThai === 'Đang giữ') {
+                    } else if (s.trangThaiGhe === 'Đang chọn') {
                         seatDiv.classList.add('locked');
                     } else {
                         seatDiv.classList.add('booked');
@@ -159,20 +159,31 @@
         
         function toggleSeat(seatObj, el, price) {
             const idx = selectedSeats.findIndex(s => s.id === seatObj.maGhe);
+            const z = zoneMap[seatObj.maKhuVuc];
             if (idx > -1) {
                 // Deselect
                 selectedSeats.splice(idx, 1);
                 el.classList.remove('selected');
             } else {
                 // Select
+                const currentZoneSelected = selectedSeats.filter(s => s.maKhuVuc === seatObj.maKhuVuc).length;
+                const maxVe = (z.soVeToiDaPerKH != null && z.soVeToiDaPerKH > 0) ? z.soVeToiDaPerKH : 4;
+                
+                if (currentZoneSelected >= maxVe) {
+                    alert(`Khu vực ${z.tenKhuVuc} chỉ cho phép chọn tối đa ${maxVe} ghế!`);
+                    return;
+                }
+                
                 if (selectedSeats.length >= 10) {
                     alert("Chỉ được chọn tối đa 10 ghế trong một đơn hàng!");
                     return;
                 }
+                
                 selectedSeats.push({
                     id: seatObj.maGhe,
                     name: seatObj.tenGhe,
-                    price: price
+                    price: price,
+                    maKhuVuc: seatObj.maKhuVuc
                 });
                 el.classList.add('selected');
             }
@@ -213,7 +224,8 @@
             btn.textContent = 'ĐANG GIỮ CHỖ...';
             
             const payload = {
-                maGheList: selectedSeats.map(s => s.id)
+                maGheList: selectedSeats.map(s => s.id),
+                maSK: maSK
             };
             
             fetch('/api/booking/lock-seats', {
@@ -237,7 +249,6 @@
             });
         }
         
-        // Khởi tạo
         document.addEventListener('DOMContentLoaded', () => {
             renderSeats();
         });

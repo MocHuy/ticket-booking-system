@@ -32,15 +32,57 @@
             <div class="collapse navbar-collapse" id="navMain">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/su-kien}">
-                            <i class="bi bi-calendar-event me-1"></i>Sự kiện
+                        <a class="nav-link" th:href="@{/}">
+                            <i class="bi bi-house-door me-1"></i>Trang chủ
                         </a>
                     </li>
+                    <!-- Nếu đã đăng nhập và là ADMIN hoặc ORGANIZER -->
+                    <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'ADMIN') or #lists.contains(session.roles, 'ORGANIZER')))}">
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/sukien}">
+                                <i class="bi bi-calendar-event me-1"></i>Quản lý sự kiện
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/donhang}">
+                                <i class="bi bi-receipt me-1"></i>Đơn hàng
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/ve}">
+                                <i class="bi bi-ticket me-1"></i>Vé
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/taikhoan}">
+                                <i class="bi bi-person-workspace me-1"></i>Tài khoản
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/baocao}">
+                                <i class="bi bi-graph-up me-1"></i>Báo cáo
+                            </a>
+                        </li>
+                    </th:block>
+                    <!-- Nếu đã đăng nhập và là STAFF hoặc ADMIN -->
+                    <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'STAFF') or #lists.contains(session.roles, 'ADMIN')))}">
+                        <li class="nav-item" th:if="${!#lists.contains(session.roles, 'ADMIN')}"> <!-- Để admin không bị lặp soát vé nếu không thích, hoặc cho hiện cả hai -->
+                            <a class="nav-link" th:href="@{/soat-ve}">
+                                <i class="bi bi-qr-code-scan me-1"></i>Soát vé
+                            </a>
+                        </li>
+                        <li class="nav-item" th:if="${#lists.contains(session.roles, 'ADMIN')}">
+                            <a class="nav-link" th:href="@{/soat-ve}">
+                                <i class="bi bi-qr-code-scan me-1"></i>Soát vé
+                            </a>
+                        </li>
+                    </th:block>
                 </ul>
                 <ul class="navbar-nav ms-auto align-items-center gap-2">
                     <!-- Chưa đăng nhập -->
-                    <li class="nav-item" th:if="${session.nguoiDung == null}">
+                    <li class="nav-item d-flex gap-2" th:if="${session.nguoiDung == null}">
                         <a class="btn btn-outline-light btn-sm" th:href="@{/dang-nhap}">Đăng nhập</a>
+                        <a class="btn btn-primary btn-sm text-white" th:href="@{/dang-ky}">Đăng ký</a>
                     </li>
                     <!-- Đã đăng nhập -->
                     <li class="nav-item dropdown" th:if="${session.nguoiDung != null}">
@@ -51,19 +93,22 @@
                             <span th:text="${session.nguoiDung.tenTaiKhoan}">Người dùng</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" th:href="@{/ve-cua-toi}"><i class="bi bi-ticket me-2"></i>Vé của tôi</a></li>
-                            <li><a class="dropdown-item" th:href="@{/tai-khoan}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
-                            <li th:if="${session.nguoiDung.isAdmin}">
-                                <hr class="dropdown-divider">
-                                <a class="dropdown-item" th:href="@{/admin}"><i class="bi bi-gear me-2"></i>Quản trị</a>
+                            <!-- Vé của tôi (Chỉ hiện cho CUSTOMER) -->
+                            <li th:if="${session.roles != null and #lists.contains(session.roles, 'CUSTOMER')}">
+                                <a class="dropdown-item" th:href="@{/ve-cua-toi}"><i class="bi bi-ticket me-2"></i>Vé của tôi</a>
                             </li>
+                            <!-- Đơn hàng của tôi (Chỉ hiện cho CUSTOMER) -->
+                            <li th:if="${session.roles != null and #lists.contains(session.roles, 'CUSTOMER')}">
+                                <a class="dropdown-item" th:href="@{/don-hang-cua-toi}"><i class="bi bi-receipt me-2"></i>Đơn hàng của tôi</a>
+                            </li>
+                            <!-- Tài khoản -->
+                            <li><a class="dropdown-item" th:href="@{/tai-khoan}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
+                            
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <form th:action="@{/dang-xuat}" method="post">
-                                    <button type="submit" class="dropdown-item text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
-                                    </button>
-                                </form>
+                                <a class="dropdown-item text-danger" th:href="@{/dang-xuat}">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                                </a>
                             </li>
                         </ul>
                     </li>

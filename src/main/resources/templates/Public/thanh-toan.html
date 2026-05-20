@@ -27,6 +27,8 @@
         .btn-success:hover { background: #059669; }
         .btn-fail { background: #ef4444; }
         .btn-fail:hover { background: #dc2626; }
+        .btn-cancel { background: #64748b; }
+        .btn-cancel:hover { background: #475569; }
         
         .navbar-public { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .navbar-brand { font-size: 24px; font-weight: bold; color: #2563eb; text-decoration: none; }
@@ -41,11 +43,16 @@
         <div class="checkout-card">
             <div class="checkout-header">
                 <h2>Hoàn Tất Thanh Toán</h2>
-                <div class="timer-box">Thời gian giữ ghế: <span id="countdown">10:00</span></div>
+                <div class="timer-box">Thời gian giữ ghế còn: <span id="countdown">10:00</span></div>
             </div>
             
             <div class="checkout-body">
                 <h3 style="margin-top:0; color: #1e3a8a; font-family: 'Times New Roman', Times, serif;">Thông tin đơn hàng</h3>
+                
+                <div class="info-row">
+                    <span class="info-label">Mã đơn hàng:</span>
+                    <span class="info-value" th:text="${orderId}">DH-12345678</span>
+                </div>
                 
                 <div class="info-row">
                     <span class="info-label">Sự kiện:</span>
@@ -63,7 +70,7 @@
                 
                 <div class="info-row">
                     <span class="info-label">Khách hàng:</span>
-                    <span class="info-value">Demo User (KH001)</span>
+                    <span class="info-value" th:text="${session.tenTaiKhoan != null ? session.tenTaiKhoan + ' (' + session.maKH + ')' : 'Chưa đăng nhập'}">Demo User (KH001)</span>
                 </div>
                 
                 <div class="total-row">
@@ -83,37 +90,51 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Hủy đơn chủ động -->
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn-pay btn-cancel" style="max-width: 250px; margin: 0 auto; display: block;" onclick="cancelOrderActive()">
+                        <i class="fa-solid fa-ban"></i> Hủy đơn hàng & Nhả ghế
+                    </button>
+                </div>
             </div>
         </div>
     </div>
     
-    <input type="hidden" id="seatsParam" th:value="${seatsParam}">
+    <input type="hidden" id="orderIdParam" th:value="${orderId}">
 
-    <script>
-        // Đếm ngược 10 phút
-        let timeLeft = 600; // 10 minutes in seconds
+    <script th:inline="javascript">
+        // Đọc thời gian còn lại động từ máy chủ
+        let timeLeft = /*[[${remainingSeconds}]]*/ 600;
+        const orderId = /*[[${orderId}]]*/ '';
         const timerEl = document.getElementById('countdown');
+        
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // Khởi tạo text ban đầu
+        timerEl.textContent = formatTime(timeLeft);
         
         const countdownTimer = setInterval(() => {
             timeLeft--;
-            const m = Math.floor(timeLeft / 60);
-            const s = timeLeft % 60;
-            timerEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            
             if (timeLeft <= 0) {
                 clearInterval(countdownTimer);
+                timerEl.textContent = "00:00";
                 alert("Đã hết thời gian giữ ghế. Đơn hàng đã bị hủy và ghế đã được trả lại.");
-                window.location.href = '/';
+                cancelOrderOnTimeout();
+            } else {
+                timerEl.textContent = formatTime(timeLeft);
             }
         }, 1000);
         
         function processPayment(isSuccess) {
-            clearInterval(countdownTimer);
-            const seats = document.getElementById('seatsParam').value;
-            
             const payload = {
-                seats: seats,
-                success: isSuccess
+                orderId: orderId,
+                success: isSuccess,
+                paymentMethod: 'Chuyển khoản ngân hàng'
             };
             
             fetch('/api/booking/checkout', {
@@ -125,12 +146,51 @@
             .then(d => {
                 if(d.error) {
                     alert("Lỗi: " + d.error);
+                    if (d.error.includes("hết hạn")) {
+                        window.location.href = '/';
+                    }
                 } else {
+                    clearInterval(countdownTimer);
                     alert(d.message);
                     window.location.href = d.redirect;
                 }
             })
             .catch(() => alert('Lỗi kết nối tới server!'));
+        }
+
+        function cancelOrderOnTimeout() {
+            const payload = { orderId: orderId };
+            fetch('/api/booking/cancel-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                window.location.href = '/';
+            })
+            .catch(() => {
+                window.location.href = '/';
+            });
+        }
+
+        function cancelOrderActive() {
+            if (confirm("Bạn có chắc chắn muốn hủy đơn hàng này và giải phóng các ghế đã chọn?")) {
+                clearInterval(countdownTimer);
+                const payload = { orderId: orderId };
+                fetch('/api/booking/cancel-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(d => {
+                    alert(d.message || "Đã hủy đơn hàng thành công.");
+                    window.location.href = d.redirect || '/';
+                })
+                .catch(() => {
+                    window.location.href = '/';
+                });
+            }
         }
     </script>
 </body>

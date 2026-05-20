@@ -86,12 +86,22 @@ public class DonHangController {
         }
     }
 
+    @Autowired
+    private com.dede.ticketsystem.service.SessionService sessionService;
+
     /** API: tạo đơn hàng nhanh (test) */
     @PostMapping("/api/tao-nhanh")
     @ResponseBody
     public ResponseEntity<?> taoDonNhanh(@RequestParam String maSK, @RequestParam int soLuong, @RequestParam(required = false) String maKH) {
         try {
-            DonHang dh = donHangService.taoDonHang(maSK, soLuong, maKH != null ? maKH : "KH001", "NV001");
+            String currentMaKH = (maKH != null && !maKH.isBlank()) ? maKH : sessionService.getCurrentMaKH();
+            if (currentMaKH == null) {
+                // Thử lấy khách hàng hiện tại của user, hoặc fallback
+                currentMaKH = "KH001"; 
+            }
+            String currentMaND = sessionService.getCurrentMaND();
+            String maNV = currentMaND != null ? currentMaND : "NV001";
+            DonHang dh = donHangService.taoDonHang(maSK, soLuong, currentMaKH, maNV);
             return ResponseEntity.ok(Map.of("message", "Tạo đơn hàng thành công", "maDonHang", dh.getMaDonHang()));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
