@@ -53,7 +53,11 @@ public class DonHangController {
                 if (displayName == null || displayName.isBlank()) {
                     displayName = kh.getNguoiDung() != null ? kh.getNguoiDung().getTenTaiKhoan() : kh.getMaKH();
                 }
+                // Map cả MaKH và MaND sang displayName để giải quyết triệt để lỗi phân giải tên khách hàng
                 mapKhachHang.put(kh.getMaKH(), displayName);
+                if (kh.getNguoiDung() != null) {
+                    mapKhachHang.put(kh.getNguoiDung().getMaND(), displayName);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

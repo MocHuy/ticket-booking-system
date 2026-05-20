@@ -218,8 +218,14 @@ public class DataInitializer implements CommandLineRunner {
             // Đảm bảo có bản ghi KHACHHANG
             Optional<KhachHang> khOpt = khachHangRepository.findByMaND(user.getMaND());
             if (khOpt.isEmpty()) {
+                String maKH = "KH-" + user.getTenTaiKhoan().toUpperCase();
+                Optional<KhachHang> existingKh = khachHangRepository.findById(maKH);
+                if (existingKh.isPresent()) {
+                    maKH = "KH-" + user.getMaND().toUpperCase();
+                }
+                
                 KhachHang kh = new KhachHang();
-                kh.setMaKH("KH-" + user.getTenTaiKhoan().toUpperCase());
+                kh.setMaKH(maKH);
                 kh.setHoTenKH("Khách hàng " + user.getTenTaiKhoan());
                 kh.setTongChiTieu(BigDecimal.ZERO);
                 kh.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));
@@ -227,13 +233,19 @@ public class DataInitializer implements CommandLineRunner {
                 kh.setMaHangThanhVien(null); // để null để tránh foreign key constraint nếu chưa có dữ liệu HANGTHANHVIEN
 
                 khachHangRepository.save(kh);
-                System.out.println("Khởi tạo KHACHHANG cho user customer thành công");
+                System.out.println("Khởi tạo KHACHHANG cho user customer thành công: " + maKH);
             }
         } else {
             // Đảm bảo có bản ghi NHANVIEN
             String checkSql = "SELECT COUNT(*) FROM NHANVIEN WHERE MaND = ?";
             Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, user.getMaND());
             if (count == null || count == 0) {
+                String maNV = "NV-" + user.getTenTaiKhoan().toUpperCase();
+                Integer nvExists = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM NHANVIEN WHERE MaNV = ?", Integer.class, maNV);
+                if (nvExists != null && nvExists > 0) {
+                    maNV = "NV-" + user.getMaND().toUpperCase();
+                }
+
                 String loaiNV = "Quản lý";
                 double luongCB = 15000000;
                 double phuCap = 2000000;
@@ -250,8 +262,8 @@ public class DataInitializer implements CommandLineRunner {
 
                 String insertSql = "INSERT INTO NHANVIEN (MaNV, LoaiNV, NgayVaoLam, TrangThaiLamViec, LuongCoBan, PhuCap, MaND) " +
                                    "VALUES (?, ?, SYSTIMESTAMP, 'Đang làm việc', ?, ?, ?)";
-                jdbcTemplate.update(insertSql, "NV-" + user.getTenTaiKhoan().toUpperCase(), loaiNV, luongCB, phuCap, user.getMaND());
-                System.out.println("Khởi tạo NHANVIEN cho user " + username + " thành công");
+                jdbcTemplate.update(insertSql, maNV, loaiNV, luongCB, phuCap, user.getMaND());
+                System.out.println("Khởi tạo NHANVIEN cho user " + username + " thành công: " + maNV);
             }
         }
     }

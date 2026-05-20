@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_HuyDonHang (
     p_MaDonHang IN VARCHAR2,
     p_LyDo      IN VARCHAR2 DEFAULT NULL

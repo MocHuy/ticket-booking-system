@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_XacThucVeTaiCong (
     p_MaQR      IN VARCHAR2,
     p_MaNV      IN VARCHAR2,

@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_TaoSuKien (
     p_MaSK          IN VARCHAR2,
     p_TenSK         IN VARCHAR2,

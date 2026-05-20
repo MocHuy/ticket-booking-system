@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_DongBoLichSuSoatVeOffline (
     p_MaNV      IN VARCHAR2,
     p_SoDongBo  OUT NUMBER

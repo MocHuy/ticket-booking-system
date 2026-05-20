@@ -139,6 +139,7 @@ Hệ thống đã được tích hợp bộ dữ liệu mẫu thông minh qua **
 - **Email Service:** Email gửi vé và thông tin đơn hàng được giả lập lưu trữ vào bảng `LICHSUGUI_EMAIL` trong cơ sở dữ liệu và ghi nhận trực tiếp ở tab terminal console log để tránh phụ thuộc vào server SMTP bên ngoài.
 - **Mobile App soát vé:** Để tinh giản và tối ưu hóa vận hành, chức năng mobile app native của nhân viên soát vé được thay thế hoàn toàn bằng trang Web Responsive chạy mượt mà trên Safari/Chrome của điện thoại.
 - **Tải trọng 10.000 User đồng thời:** Đây là tiêu chuẩn đo lường và định hướng thiết kế kiến trúc hàng đợi để mô phỏng kiểm thử hiệu năng, không đại diện cho hạ tầng phần cứng chạy thử nghiệm cục bộ hiện tại.
+- **Logic nghiệp vụ SQL Procedure:** Ứng dụng demo sử dụng logic Spring Boot/JPA làm nguồn nghiệp vụ chính; các procedure SQL là tài liệu tham khảo/mô phỏng, không phải luồng runtime chính.
 
 ---
 

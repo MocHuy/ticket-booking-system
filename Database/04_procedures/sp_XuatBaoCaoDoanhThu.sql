@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_XuatBaoCaoDoanhThu (
     p_MaSK      IN VARCHAR2 DEFAULT NULL,
     p_TuNgay    IN DATE     DEFAULT NULL,

@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_ThuLaiThanhToan (
     p_MaDonHang     IN VARCHAR2,
     p_SoTien        IN NUMBER,

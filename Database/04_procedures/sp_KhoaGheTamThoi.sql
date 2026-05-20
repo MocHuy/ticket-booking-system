@@ -1,3 +1,4 @@
+-- LEGACY / DEMO SQL ONLY, Java service is source of truth.
 CREATE OR REPLACE PROCEDURE sp_KhoaGheTamThoi (
     p_MaGhe         IN VARCHAR2,
     p_MaPhienKhoa   IN VARCHAR2,    -- Session ID của người dùng
