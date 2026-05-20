@@ -48,13 +48,12 @@ public class SoatVeController {
             throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Yêu cầu quyền STAFF hoặc ADMIN.");
         }
         
-        // Lấy thông tin mã nhân viên
+        // Lấy thông tin mã nhân viên. SessionService chỉ đọc NHANVIEN theo MaND.
         String maNV = sessionService.getCurrentMaNV();
         if (maNV == null) {
-            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản của bạn chưa được liên kết với hồ sơ Nhân viên (NHANVIEN).");
+            model.addAttribute("errorMsg", "Tài khoản của bạn chưa được liên kết với hồ sơ Nhân viên (NHANVIEN). Vui lòng chạy seed data hoặc liên hệ Admin để tạo hồ sơ nhân viên.");
         }
 
-        // Lấy danh sách tất cả các sự kiện để nhân viên chọn
         List<SuKien> suKienList = suKienService.layTatCa();
         model.addAttribute("suKienList", suKienList);
         model.addAttribute("maNV", maNV);
@@ -69,6 +68,11 @@ public class SoatVeController {
     public ResponseEntity<?> validateTicket(@RequestParam String qrPayloadOrCode,
                                             @RequestParam String maSK,
                                             @RequestParam(required = false, defaultValue = "Cổng chính") String congSoat) {
+        ResponseEntity<?> authError = ensureStaffOrAdminApi("Yêu cầu quyền STAFF hoặc ADMIN để soát vé.");
+        if (authError != null) {
+            return authError;
+        }
+
         String maNV = sessionService.getCurrentMaNV();
         if (maNV == null) {
             Map<String, Object> errorResp = new HashMap<>();
@@ -77,8 +81,14 @@ public class SoatVeController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(errorResp);
         }
 
-        ValidationResult result = ticketValidationService.validateQr(qrPayloadOrCode, maSK, maNV, congSoat, "Online");
-        return ResponseEntity.ok(result);
+        try {
+            ValidationResult result = ticketValidationService.validateQr(qrPayloadOrCode, maSK, maNV, congSoat, "Online");
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            System.err.println("Lỗi soát vé online: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("success", false, "message", "Không thể soát vé lúc này. Vui lòng thử lại."));
+        }
     }
 
     /**
@@ -87,6 +97,11 @@ public class SoatVeController {
     @PostMapping("/api/soat-ve/sync")
     @ResponseBody
     public ResponseEntity<?> syncOfflineTickets(@RequestBody List<OfflineScanDTO> pendingScans) {
+        ResponseEntity<?> authError = ensureStaffOrAdminApi("Yêu cầu quyền STAFF hoặc ADMIN để đồng bộ soát vé.");
+        if (authError != null) {
+            return authError;
+        }
+
         String maNV = sessionService.getCurrentMaNV();
         if (maNV == null) {
             Map<String, Object> errorResp = new HashMap<>();
@@ -105,14 +120,8 @@ public class SoatVeController {
         for (OfflineScanDTO scan : pendingScans) {
             Timestamp thoiGianQuet = null;
             if (scan.getThoiGianQuet() != null) {
-                try {
-                    // Chấp nhận cả epoch timestamp (milliseconds) hoặc định dạng chuẩn ISO/SQL
-                    if (scan.getThoiGianQuet().matches("^\\d+$")) {
-                        thoiGianQuet = new Timestamp(Long.parseLong(scan.getThoiGianQuet()));
-                    } else {
-                        thoiGianQuet = Timestamp.valueOf(scan.getThoiGianQuet().replace("T", " ").replace("Z", ""));
-                    }
-                } catch (Exception e) {
+                thoiGianQuet = parseScanTimestamp(scan.getThoiGianQuet());
+                if (thoiGianQuet == null) {
                     thoiGianQuet = new Timestamp(System.currentTimeMillis());
                 }
             }
@@ -147,6 +156,11 @@ public class SoatVeController {
     @GetMapping("/api/soat-ve/history")
     @ResponseBody
     public ResponseEntity<?> getScanHistory() {
+        ResponseEntity<?> authError = ensureStaffOrAdminApi("Yêu cầu quyền STAFF hoặc ADMIN để xem lịch sử soát vé.");
+        if (authError != null) {
+            return authError;
+        }
+
         String maNV = sessionService.getCurrentMaNV();
         if (maNV == null) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("success", false, "message", "Không tìm thấy mã nhân viên."));
@@ -162,8 +176,64 @@ public class SoatVeController {
     @PostMapping("/api/soat-ve/reset")
     @ResponseBody
     public ResponseEntity<?> resetTestData() {
+        ResponseEntity<?> authError = ensureStaffOrAdminApi("Yêu cầu quyền STAFF hoặc ADMIN để reset dữ liệu soát vé.");
+        if (authError != null) {
+            return authError;
+        }
         ticketValidationService.resetTestData();
         return ResponseEntity.ok(Map.of("success", true, "message", "Reset dữ liệu soát vé thành công!"));
+    }
+
+    private ResponseEntity<?> ensureStaffOrAdminApi(String message) {
+        if (!sessionService.isLoggedIn()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("success", false, "message", "Bạn cần đăng nhập.", "redirect", "/dang-nhap"));
+        }
+        if (!sessionService.hasAnyRole("STAFF", "ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("success", false, "message", message));
+        }
+        return null;
+    }
+
+    private Timestamp parseScanTimestamp(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return null;
+        try {
+            String clean = timeStr.trim();
+            if (clean.matches("^\\d+$")) {
+                return new Timestamp(Long.parseLong(clean));
+            }
+            return parseTimestamp(clean);
+        } catch (Exception e) {
+            System.err.println("Không thể parse timestamp: " + timeStr + " - " + e.getMessage());
+            return null;
+        }
+    }
+
+    private Timestamp parseTimestamp(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return null;
+        try {
+            String clean = timeStr.trim()
+                    .replace("T", " ")
+                    .replace("Z", "");
+
+            if (clean.contains(".")) {
+                clean = clean.split("\\.")[0];
+            }
+
+            if (clean.length() == 16) {
+                clean += ":00";
+            }
+
+            if (clean.length() > 19) {
+                clean = clean.substring(0, 19);
+            }
+
+            return Timestamp.valueOf(clean);
+        } catch (Exception e) {
+            System.err.println("Không thể parse timestamp: " + timeStr + " - " + e.getMessage());
+            return null;
+        }
     }
 
     /**

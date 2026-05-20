@@ -94,6 +94,31 @@ Chạy các lệnh sau tại thư mục gốc của dự án:
   mvn spring-boot:run
   ```
 
+### 4.3 Reset dữ liệu demo/runtime
+Các script reset nằm trong `Database/99_reset/` và chỉ xóa dữ liệu, không drop table.
+
+- **Reset toàn bộ data** bằng Oracle SQL Developer hoặc SQLPlus:
+  ```sql
+  @Database/99_reset/reset_all_data.sql
+  ```
+- **Reset runtime demo** nhưng giữ user, role, sự kiện, khu vực và ghế:
+  ```sql
+  @Database/99_reset/reset_runtime_only.sql
+  ```
+- **Tắt seed data khi start app:**
+  ```properties
+  app.seed.enabled=false
+  ```
+- **Bật lại seed data:**
+  ```properties
+  app.seed.enabled=true
+  ```
+- **Reset runtime khi start app chỉ dành cho profile `dev` hoặc `local`:**
+  ```properties
+  app.dev.reset-data-on-start=true
+  ```
+  Mặc định là `false`; nếu không chạy profile `dev/local`, ứng dụng sẽ bỏ qua reset tự động.
+
 ---
 
 ## 5. Tài khoản & URL Demo chính

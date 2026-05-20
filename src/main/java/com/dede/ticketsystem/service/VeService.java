@@ -59,12 +59,7 @@ public class VeService {
         ve.setThoiGianPhat(new Timestamp(System.currentTimeMillis()));
         
         if (dto.getThoiGianSuDung() != null && !dto.getThoiGianSuDung().isBlank()) {
-            try {
-                // Parse format "YYYY-MM-DDTHH:mm" to Timestamp
-                ve.setThoiGianSuDung(Timestamp.valueOf(dto.getThoiGianSuDung().replace("T", " ") + ":00"));
-            } catch (Exception e) {
-                // ignore or handle
-            }
+            ve.setThoiGianSuDung(parseTimestampOrThrow("Thời gian sử dụng", dto.getThoiGianSuDung()));
         }
         
         ve.setMaDonHang(dto.getMaDonHang() != null && dto.getMaDonHang().isBlank() ? null : dto.getMaDonHang());
@@ -82,11 +77,7 @@ public class VeService {
         if (dto.getTrangThaiVe() != null) ve.setTrangThaiVe(dto.getTrangThaiVe());
         
         if (dto.getThoiGianSuDung() != null && !dto.getThoiGianSuDung().isBlank()) {
-            try {
-                ve.setThoiGianSuDung(Timestamp.valueOf(dto.getThoiGianSuDung().replace("T", " ") + ":00"));
-            } catch (Exception e) {
-                // ignore or handle
-            }
+            ve.setThoiGianSuDung(parseTimestampOrThrow("Thời gian sử dụng", dto.getThoiGianSuDung()));
         }
         
         if (dto.getMaDonHang() != null) ve.setMaDonHang(dto.getMaDonHang().isBlank() ? null : dto.getMaDonHang());
@@ -117,34 +108,47 @@ public class VeService {
     }
 
     public Optional<Ve> parsePayloadAndFindVe(String payloadOrCode) {
+        return parsePayloadAndFindVe(payloadOrCode, false);
+    }
+
+    public Optional<Ve> parsePayloadAndFindVeWithLock(String payloadOrCode) {
+        return parsePayloadAndFindVe(payloadOrCode, true);
+    }
+
+    private Optional<Ve> parsePayloadAndFindVe(String payloadOrCode, boolean withLock) {
         if (payloadOrCode == null || payloadOrCode.trim().isEmpty()) {
             return Optional.empty();
         }
 
         String input = payloadOrCode.trim();
 
-        // 1. Nếu bắt đầu bằng TICKET|
         if (input.startsWith("TICKET|")) {
             String[] parts = input.split("\\|");
             String parsedMaVe = null;
             String parsedMaQR = null;
             for (String part : parts) {
-                if (part.startsWith("maVe=")) {
-                    parsedMaVe = part.substring("maVe=".length());
-                } else if (part.startsWith("maQR=")) {
-                    parsedMaQR = part.substring("maQR=".length());
+                String[] keyValue = part.split("=", 2);
+                if (keyValue.length != 2) {
+                    continue;
+                }
+                String key = keyValue[0].trim();
+                String value = keyValue[1].trim();
+                if ("maVe".equals(key)) {
+                    parsedMaVe = value;
+                } else if ("maQR".equals(key)) {
+                    parsedMaQR = value;
                 }
             }
 
             if (parsedMaVe != null && !parsedMaVe.trim().isEmpty()) {
-                Optional<Ve> veOpt = veRepository.findById(parsedMaVe.trim());
+                Optional<Ve> veOpt = findByMaVe(parsedMaVe.trim(), withLock);
                 if (veOpt.isPresent()) {
                     return veOpt;
                 }
             }
 
             if (parsedMaQR != null && !parsedMaQR.trim().isEmpty()) {
-                Optional<Ve> veOpt = veRepository.findByMaQR(parsedMaQR.trim());
+                Optional<Ve> veOpt = findByMaQR(parsedMaQR.trim(), withLock);
                 if (veOpt.isPresent()) {
                     return veOpt;
                 }
@@ -153,13 +157,53 @@ public class VeService {
             return Optional.empty();
         }
 
-        // 2. Thử tìm bằng MaQR thuần
-        Optional<Ve> veByQR = veRepository.findByMaQR(input);
+        Optional<Ve> veByQR = findByMaQR(input, withLock);
         if (veByQR.isPresent()) {
             return veByQR;
         }
 
-        // 3. Thử tìm bằng MaVe thuần
-        return veRepository.findById(input);
+        return findByMaVe(input, withLock);
+    }
+
+    private Optional<Ve> findByMaVe(String maVe, boolean withLock) {
+        return withLock ? veRepository.findByMaVeWithLock(maVe) : veRepository.findById(maVe);
+    }
+
+    private Optional<Ve> findByMaQR(String maQR, boolean withLock) {
+        return withLock ? veRepository.findByMaQRWithLock(maQR) : veRepository.findByMaQR(maQR);
+    }
+
+    private Timestamp parseTimestamp(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return null;
+        try {
+            String clean = timeStr.trim()
+                    .replace("T", " ")
+                    .replace("Z", "");
+
+            if (clean.contains(".")) {
+                clean = clean.split("\\.")[0];
+            }
+
+            if (clean.length() == 16) {
+                clean += ":00";
+            }
+
+            if (clean.length() > 19) {
+                clean = clean.substring(0, 19);
+            }
+
+            return Timestamp.valueOf(clean);
+        } catch (Exception e) {
+            System.err.println("Không thể parse timestamp: " + timeStr + " - " + e.getMessage());
+            return null;
+        }
+    }
+
+    private Timestamp parseTimestampOrThrow(String fieldName, String timeStr) {
+        Timestamp parsed = parseTimestamp(timeStr);
+        if (timeStr != null && !timeStr.isBlank() && parsed == null) {
+            throw new RuntimeException(fieldName + " không hợp lệ. Vui lòng nhập đúng định dạng ngày giờ.");
+        }
+        return parsed;
     }
 }

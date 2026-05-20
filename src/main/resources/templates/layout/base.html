@@ -10,8 +10,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Google Fonts: DM Sans + DM Serif Display -->
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <!-- Font Awesome (used by legacy templates) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Be Vietnam Pro -->
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- CSS toàn cục -->
     <link th:href="@{/css/main.css}" rel="stylesheet">
 
@@ -21,8 +23,8 @@
 <body>
 
     <!-- Navbar (ẩn trên trang login/register) -->
-    <nav th:if="${showNavbar != false}" class="navbar navbar-expand-lg dd-navbar">
-        <div class="container">
+    <nav th:if="${showNavbar != false}" class="navbar navbar-expand-xl dd-navbar">
+        <div class="page-container nav-container">
             <a class="navbar-brand" th:href="@{/}">
                 <i class="bi bi-ticket-perforated-fill me-2"></i>Dề Dê Tickets
             </a>
@@ -33,12 +35,12 @@
                 <ul class="navbar-nav me-auto">
                     <!-- Public Links -->
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/}">
+                        <a class="nav-link" th:href="@{/}" data-nav-path="/">
                             <i class="bi bi-house-door me-1"></i>Trang chủ
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" th:href="@{/}">
+                        <a class="nav-link" href="/#events" data-nav-path="/#events">
                             <i class="bi bi-calendar3 me-1"></i>Sự kiện
                         </a>
                     </li>
@@ -46,12 +48,12 @@
                     <!-- CUSTOMER Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and #lists.contains(session.roles, 'CUSTOMER'))}">
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/ve-cua-toi}">
+                            <a class="nav-link" th:href="@{/ve-cua-toi}" data-nav-path="/ve-cua-toi">
                                 <i class="bi bi-ticket-perforated me-1"></i>Vé của tôi
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/don-hang-cua-toi}">
+                            <a class="nav-link" th:href="@{/don-hang-cua-toi}" data-nav-path="/don-hang-cua-toi">
                                 <i class="bi bi-receipt me-1"></i>Đơn hàng của tôi
                             </a>
                         </li>
@@ -60,27 +62,27 @@
                     <!-- ADMIN hoặc ORGANIZER Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'ADMIN') or #lists.contains(session.roles, 'ORGANIZER')))}">
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/sukien}">
+                            <a class="nav-link" th:href="@{/sukien}" data-nav-path="/sukien">
                                 <i class="bi bi-calendar-event me-1"></i>Quản lý sự kiện
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/donhang}">
+                            <a class="nav-link" th:href="@{/donhang}" data-nav-path="/donhang">
                                 <i class="bi bi-receipt me-1"></i>Đơn hàng
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/ve}">
+                            <a class="nav-link" th:href="@{/ve}" data-nav-path="/ve">
                                 <i class="bi bi-ticket me-1"></i>Vé
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/taikhoan}">
+                            <a class="nav-link" th:href="@{/taikhoan}" data-nav-path="/taikhoan">
                                 <i class="bi bi-person-workspace me-1"></i>Tài khoản
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/baocao}">
+                            <a class="nav-link" th:href="@{/baocao}" data-nav-path="/baocao">
                                 <i class="bi bi-graph-up me-1"></i>Báo cáo
                             </a>
                         </li>
@@ -89,7 +91,7 @@
                     <!-- STAFF hoặc ADMIN Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'STAFF') or #lists.contains(session.roles, 'ADMIN')))}">
                         <li class="nav-item">
-                            <a class="nav-link" th:href="@{/soat-ve}">
+                            <a class="nav-link" th:href="@{/soat-ve}" data-nav-path="/soat-ve">
                                 <i class="bi bi-qr-code-scan me-1"></i>Soát vé
                             </a>
                         </li>
@@ -103,12 +105,12 @@
                     </li>
                     <!-- Đã đăng nhập -->
                     <li class="nav-item dropdown" th:if="${session.nguoiDung != null}">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                        <button class="nav-link dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="dd-avatar">
                                 <span th:text="${#strings.substring(session.nguoiDung.tenTaiKhoan, 0, 1).toUpperCase()}">U</span>
                             </div>
                             <span th:text="${session.nguoiDung.tenTaiKhoan}">Người dùng</span>
-                        </a>
+                        </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <!-- Vé của tôi (Chỉ hiện cho CUSTOMER) -->
                             <li th:if="${session.roles != null and #lists.contains(session.roles, 'CUSTOMER')}">
@@ -119,7 +121,7 @@
                                 <a class="dropdown-item" th:href="@{/don-hang-cua-toi}"><i class="bi bi-receipt me-2"></i>Đơn hàng của tôi</a>
                             </li>
                             <!-- Tài khoản -->
-                            <li><a class="dropdown-item" th:href="@{/tai-khoan}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
+                            <li><a class="dropdown-item" th:href="@{/taikhoan}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
                             
                             <li><hr class="dropdown-divider"></li>
                             <li>
@@ -135,11 +137,17 @@
     </nav>
 
     <!-- Nội dung từng trang inject vào đây -->
-    <main layout:fragment="content"></main>
+    <div class="app-shell">
+        <main class="page-container page-main">
+            <div class="page-content">
+                <th:block layout:fragment="content"></th:block>
+            </div>
+        </main>
+    </div>
 
     <!-- Footer -->
     <footer th:if="${showFooter != false}" class="dd-footer mt-auto">
-        <div class="container py-4">
+        <div class="page-container py-4">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <span class="fw-semibold"><i class="bi bi-ticket-perforated-fill me-1"></i>Dề Dê Tickets</span>
@@ -154,6 +162,18 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.dd-navbar .nav-link[data-nav-path]').forEach(function (link) {
+                const target = link.getAttribute('data-nav-path');
+                if ((target === '/' && currentPath === '/') ||
+                    (target !== '/' && !target.includes('#') && (currentPath === target || currentPath.startsWith(target + '/')))) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
     <!-- JS riêng từng trang -->
     <th:block layout:fragment="page-js"></th:block>
 </body>

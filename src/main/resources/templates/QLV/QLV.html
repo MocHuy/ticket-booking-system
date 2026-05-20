@@ -1,78 +1,20 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Vé - Dề Dê Tickets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/pages/QLV.css}">
+    <th:block layout:fragment="page-css">
+        <link rel="stylesheet" th:href="@{/css/pages/QLV.css}">
+    </th:block>
 </head>
 
 <body>
-    <div class="layout-wrapper">
-
-        <!-- ===================== SIDEBAR ===================== -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-icon"><i class="fa-solid fa-ticket"></i></div>
-                <span class="brand-name">Dề Dê Tickets</span>
-            </div>
-
-            <nav class="sidebar-nav">
-                <ul>
-                    <li><span class="nav-label">Quản lý hệ thống</span></li>
-                    <li>
-                        <a href="/taikhoan">
-                            <i class="fa-solid fa-users"></i>
-                            <span>Quản lý Tài khoản</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/sukien">
-                            <i class="fa-solid fa-calendar-days"></i>
-                            <span>Quản lý Sự kiện</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/donhang">
-                            <i class="fa-solid fa-receipt"></i>
-                            <span>Quản lý Đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/ve" class="active">
-                            <i class="fa-solid fa-ticket-simple"></i>
-                            <span>Quản lý Vé</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-qrcode"></i>
-                            <span>Soát vé</span>
-                        </a>
-                    </li>
-                    <li><span class="nav-label">Phân tích</span></li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-chart-line"></i>
-                            <span>Báo cáo & Thống kê</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="sidebar-footer">
-                <form action="/dang-xuat" method="post">
-                    <button type="submit" class="btn-logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                        <span>Đăng xuất</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
-
-        <!-- ===================== MAIN CONTENT ===================== -->
+<div layout:fragment="content" class="admin-page">
+<!-- ===================== MAIN CONTENT ===================== -->
         <main class="main-content">
 
             <!-- Header -->
@@ -185,8 +127,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
     <!-- ===================== MODAL THÊM / SỬA / CHI TIẾT ===================== -->
     <div id="ticketModal" class="modal-overlay">
         <div class="modal-box">
@@ -206,7 +146,7 @@
                         </div>
                         <div class="form-group">
                             <label>Khu Vực <span style="color:red">*</span></label>
-                            <select id="m_maKhuVuc" class="form-control" required onchange="onZoneChange()">
+                            <select id="m_maKhuVuc" name="maKhuVuc" class="form-control" required onchange="onZoneChange()">
                                 <option value="">-- Chọn khu vực --</option>
                             </select>
                         </div>
@@ -235,6 +175,10 @@
                         <div class="form-group">
                             <label>Mã Vé (Tùy chọn)</label>
                             <input type="text" id="m_maVe" name="maVe" placeholder="Để trống để tự sinh" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Thời Gian Sử Dụng</label>
+                            <input type="datetime-local" id="m_thoiGianSuDung" name="thoiGianSuDung" class="form-control" readonly placeholder="Chưa sử dụng">
                         </div>
                         <div class="form-group" style="grid-column: 1 / -1; display:none;">
                              <input type="hidden" id="m_maQR" name="maQR">
@@ -285,12 +229,38 @@
         const modal = document.getElementById('ticketModal');
         const form = document.getElementById('ticketForm');
 
+        function formatForDateTimeLocal(value) {
+            if (!value) return '';
+            let s = String(value).trim();
+
+            // Oracle/Hibernate có thể trả về: yyyy-MM-dd HH:mm:ss.0
+            if (s.includes('.')) {
+                s = s.split('.')[0];
+            }
+
+            if (s.endsWith('Z')) {
+                s = s.substring(0, s.length - 1);
+            }
+
+            s = s.replace(' ', 'T');
+
+            if (s.length >= 16) {
+                return s.substring(0, 16);
+            }
+
+            return '';
+        }
+
         function moModalThem() {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-ticket-simple" style="margin-right:8px;color:#3b82f6;"></i>Thêm Vé Mới';
             form.action = '/ve/tao-moi';
             form.reset();
             document.getElementById('m_maVe').value = '';
             document.getElementById('m_maQR').value = '';
+            const usedAtInput = document.getElementById('m_thoiGianSuDung');
+            if (usedAtInput) usedAtInput.value = '';
+            document.getElementById('m_maKhuVuc').innerHTML = '<option value="">-- Chọn khu vực --</option>';
+            document.getElementById('m_maGhe').innerHTML = '<option value="">-- Chọn ghế --</option>';
             modal.classList.add('open');
         }
 
@@ -298,25 +268,48 @@
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen" style="margin-right:8px;color:#eab308;"></i>Cập Nhật Vé';
             form.action = '/ve/cap-nhat/' + maVe;
             form.reset();
+            const initialUsedAtInput = document.getElementById('m_thoiGianSuDung');
+            if (initialUsedAtInput) initialUsedAtInput.value = '';
 
             fetch('/ve/api/' + maVe)
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('Không thể tải dữ liệu vé');
+                    return r.json();
+                })
                 .then(d => {
                     document.getElementById('m_maVe').value = d.maVe || '';
                     document.getElementById('m_maQR').value = d.maQR || '';
                     document.getElementById('m_giaVe').value = d.giaVe || '';
                     document.getElementById('m_trangThaiVe').value = d.trangThaiVe || 'Chưa sử dụng';
                     document.getElementById('m_maSK').value = d.maSK || '';
-                    document.getElementById('m_maGhe').value = d.maGhe || '';
                     document.getElementById('m_maDonHang').value = d.maDonHang || '';
-                    
-                    if (d.thoiGianSuDung) {
-                        // Định dạng lại datetime cho input type="datetime-local" (YYYY-MM-DDThh:mm)
-                        const dt = new Date(d.thoiGianSuDung);
-                        dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-                        document.getElementById('m_thoiGianSuDung').value = dt.toISOString().slice(0, 16);
+
+                    const usedAtInput = document.getElementById('m_thoiGianSuDung');
+                    if (usedAtInput) {
+                        usedAtInput.value = formatForDateTimeLocal(d.thoiGianSuDung);
                     }
-                    modal.classList.add('open');
+
+                    const zoneSelect = document.getElementById('m_maKhuVuc');
+                    const seatSelect = document.getElementById('m_maGhe');
+                    const currentZone = d.maKhuVuc || '';
+                    const currentSeat = d.maGhe || '';
+
+                    loadZonesForEvent(d.maSK || '')
+                        .then(() => {
+                            setSelectValueWithFallback(zoneSelect, currentZone, currentZone ? currentZone + ' (khu vực hiện tại)' : '');
+                            if (!currentZone) return Promise.resolve();
+                            return loadSeatsForZone(currentZone);
+                        })
+                        .then(() => {
+                            setSelectValueWithFallback(seatSelect, currentSeat, d.tenGhe || (currentSeat ? currentSeat + ' (ghế hiện tại)' : ''));
+                            modal.classList.add('open');
+                        })
+                        .catch(err => {
+                            console.error('Không thể tải khu vực/ghế:', err);
+                            setSelectValueWithFallback(zoneSelect, currentZone, currentZone ? currentZone + ' (khu vực hiện tại)' : '');
+                            setSelectValueWithFallback(seatSelect, currentSeat, d.tenGhe || (currentSeat ? currentSeat + ' (ghế hiện tại)' : ''));
+                            modal.classList.add('open');
+                        });
                 })
                 .catch(() => alert('Không thể tải dữ liệu vé!'));
         }
@@ -341,50 +334,81 @@
         // --- DYNAMIC SELECTION LOGIC ---
         function onEventChange() {
             const maSK = document.getElementById('m_maSK').value;
+            loadZonesForEvent(maSK);
+        }
+
+        function onZoneChange() {
+            const maKV = document.getElementById('m_maKhuVuc').value;
+            loadSeatsForZone(maKV);
+        }
+
+        function loadZonesForEvent(maSK) {
             const zoneSelect = document.getElementById('m_maKhuVuc');
             const seatSelect = document.getElementById('m_maGhe');
             
             zoneSelect.innerHTML = '<option value="">-- Chọn khu vực --</option>';
             seatSelect.innerHTML = '<option value="">-- Chọn ghế --</option>';
             
-            if (!maSK) return;
+            if (!maSK) return Promise.resolve([]);
             
-            fetch('/ve/api/khu-vuc/' + maSK)
-                .then(r => r.json())
+            return fetch('/ve/api/khu-vuc/' + maSK)
+                .then(r => {
+                    if (!r.ok) throw new Error('Không thể tải khu vực');
+                    return r.json();
+                })
                 .then(data => {
-                    data.forEach(z => {
+                    const zones = Array.isArray(data) ? data : [];
+                    zones.forEach(z => {
                         const opt = document.createElement('option');
                         opt.value = z.MAKHUVUC;
                         opt.textContent = z.TENKHUVUC;
                         zoneSelect.appendChild(opt);
                     });
+                    return zones;
                 });
         }
 
-        function onZoneChange() {
-            const maKV = document.getElementById('m_maKhuVuc').value;
+        function loadSeatsForZone(maKV) {
             const seatSelect = document.getElementById('m_maGhe');
             
             seatSelect.innerHTML = '<option value="">-- Chọn ghế --</option>';
             
-            if (!maKV) return;
+            if (!maKV) return Promise.resolve([]);
             
-            fetch('/ve/api/ghe/' + maKV)
-                .then(r => r.json())
+            return fetch('/ve/api/ghe/' + maKV)
+                .then(r => {
+                    if (!r.ok) throw new Error('Không thể tải ghế');
+                    return r.json();
+                })
                 .then(data => {
-                    data.forEach(s => {
+                    const seats = Array.isArray(data) ? data : [];
+                    seats.forEach(s => {
                         const opt = document.createElement('option');
                         opt.value = s.MAGHE;
                         opt.textContent = s.TENGHE;
                         seatSelect.appendChild(opt);
                     });
+                    return seats;
                 });
+        }
+
+        function setSelectValueWithFallback(select, value, label) {
+            if (!select || !value) return;
+            const exists = Array.from(select.options).some(opt => opt.value === value);
+            if (!exists) {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label || value;
+                select.appendChild(opt);
+            }
+            select.value = value;
         }
 
         modal.addEventListener('click', function (e) {
             if (e.target === this) closeModal();
         });
     </script>
+</div>
 </body>
 
 </html>

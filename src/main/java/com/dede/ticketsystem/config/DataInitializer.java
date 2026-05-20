@@ -8,7 +8,9 @@ import com.dede.ticketsystem.repository.NguoiDungRepository;
 import com.dede.ticketsystem.repository.VaiTroRepository;
 import com.dede.ticketsystem.repository.KhachHangRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -39,9 +41,27 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Autowired
+    private Environment environment;
+
+    @Value("${app.seed.enabled:true}")
+    private boolean seedEnabled;
+
+    @Value("${app.dev.reset-data-on-start:false}")
+    private boolean resetDataOnStart;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
+        if (resetDataOnStart) {
+            resetRuntimeDataOnStartIfAllowed();
+        }
+
+        if (!seedEnabled) {
+            System.out.println("DataInitializer: app.seed.enabled=false, bỏ qua seed data.");
+            return;
+        }
+
         // 1. Tạo các vai trò mặc định
         List<VaiTro> defaultRoles = Arrays.asList(
             VaiTro.builder().maVaiTro("ADMIN").tenVaiTro("ADMIN").moTa("Quản trị viên hệ thống").build(),
@@ -65,6 +85,105 @@ public class DataInitializer implements CommandLineRunner {
         initTestData();
 
         System.out.println("KHỞI TẠO DỮ LIỆU BAN ĐẦU HOÀN TẤT VÀ IDEMPOTENT.");
+    }
+
+    private void resetRuntimeDataOnStartIfAllowed() {
+        if (!isDevOrLocalProfile()) {
+            System.err.println("============================================================");
+            System.err.println("CẢNH BÁO: app.dev.reset-data-on-start=true nhưng profile hiện tại không phải dev/local.");
+            System.err.println("DataInitializer bỏ qua reset tự động để tránh mất dữ liệu ngoài ý muốn.");
+            System.err.println("============================================================");
+            return;
+        }
+
+        System.err.println("============================================================");
+        System.err.println("CẢNH BÁO LỚN: ĐANG RESET DỮ LIỆU RUNTIME DEMO KHI START APP.");
+        System.err.println("Chỉ chạy vì app.dev.reset-data-on-start=true và profile là dev/local.");
+        System.err.println("============================================================");
+
+        deleteIfTableExists("LICHSUSOATVE");
+        deleteIfTableExists("LICHSUGUI_EMAIL");
+        deleteIfTableExists("GIAODICHTHANHTOAN");
+        deleteIfTableExists("VE");
+        deleteIfTableExists("DONHANG");
+        deleteIfTableExists("HANGDOIAO");
+        deleteIfTableExists("LOG_HANH_VI");
+
+        dropGheTrangThaiConstraintIfExists();
+        updateIfTableExists("GHENGOI", "UPDATE GHENGOI SET TrangThaiGhe = 'Trống', ThoiGianKhoaTam = NULL, MaPhienKhoa = NULL");
+        addGheTrangThaiConstraintIfExists();
+        updateIfTableExists("KHUVUC", "UPDATE KHUVUC SET SoGheDaBan = 0");
+        updateIfTableExists("SUKIEN", "UPDATE SUKIEN SET SoVeDaBan = 0");
+    }
+
+    private boolean isDevOrLocalProfile() {
+        String[] activeProfiles = environment.getActiveProfiles();
+        if (activeProfiles == null || activeProfiles.length == 0) {
+            return false;
+        }
+        for (String profile : activeProfiles) {
+            if ("dev".equalsIgnoreCase(profile) || "local".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void deleteIfTableExists(String tableName) {
+        if (!tableExists(tableName)) {
+            System.out.println("Reset runtime: bỏ qua bảng không tồn tại " + tableName);
+            return;
+        }
+        jdbcTemplate.update("DELETE FROM " + tableName);
+        System.out.println("Reset runtime: đã xóa dữ liệu " + tableName);
+    }
+
+    private void updateIfTableExists(String tableName, String sql) {
+        if (!tableExists(tableName)) {
+            System.out.println("Reset runtime: bỏ qua bảng không tồn tại " + tableName);
+            return;
+        }
+        jdbcTemplate.update(sql);
+        System.out.println("Reset runtime: đã reset " + tableName);
+    }
+
+    private void dropGheTrangThaiConstraintIfExists() {
+        if (!tableExists("GHENGOI")) {
+            return;
+        }
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM USER_CONSTRAINTS WHERE TABLE_NAME = 'GHENGOI' AND CONSTRAINT_NAME = 'CHK_GHE_TRANGTHAI'",
+                Integer.class
+        );
+        if (count != null && count > 0) {
+            jdbcTemplate.execute("ALTER TABLE GHENGOI DROP CONSTRAINT CHK_GHE_TRANGTHAI");
+            System.out.println("Reset runtime: đã xóa constraint CHK_GHE_TRANGTHAI cũ.");
+        }
+    }
+
+    private void addGheTrangThaiConstraintIfExists() {
+        if (!tableExists("GHENGOI")) {
+            return;
+        }
+
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM USER_CONSTRAINTS WHERE TABLE_NAME = 'GHENGOI' AND CONSTRAINT_NAME = 'CHK_GHE_TRANGTHAI'",
+                Integer.class
+        );
+        if (count == null || count == 0) {
+            jdbcTemplate.execute("ALTER TABLE GHENGOI ADD CONSTRAINT CHK_GHE_TRANGTHAI CHECK (TrangThaiGhe IN ('Trống', 'Đang chọn', 'Đã bán', 'Bảo trì'))");
+            System.out.println("Reset runtime: đã tạo lại constraint CHK_GHE_TRANGTHAI chuẩn Unicode.");
+        }
+    }
+
+    private boolean tableExists(String tableName) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM USER_TABLES WHERE TABLE_NAME = ?",
+                Integer.class,
+                tableName.toUpperCase()
+        );
+        return count != null && count > 0;
     }
 
     private void initTestData() {
@@ -98,23 +217,28 @@ public class DataInitializer implements CommandLineRunner {
             Integer countSK = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM SUKIEN WHERE MaSK = 'SK001'", Integer.class);
             if (countSK == null || countSK == 0) {
                 jdbcTemplate.update("INSERT INTO SUKIEN (MaSK, TenSK, MoTa, ThoiGianBatDau, ThoiGianKetThuc, ThoiGianMoBan, ThoiGianDongBan, TrangThaiSK, MaLoaiSK, MaDiaDiem, TongSoVe, SoVeDaBan, ThoiGianTao, CapNhatLanCuoi) " +
-                        "VALUES ('SK001', 'Dề Dê Summer Concert 2026', 'Đêm nhạc hoành tráng mùa hè 2026', TO_TIMESTAMP('2026-07-15 19:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-07-15 23:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-05-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-07-14 23:59:59', 'YYYY-MM-DD HH24:MI:SS'), 'Đang mở bán', 'LSK001', 'DD001', 5000, 2, SYSTIMESTAMP, SYSTIMESTAMP)");
+                        "VALUES ('SK001', 'Dề Dê Summer Concert 2026', 'Đêm nhạc hoành tráng mùa hè 2026', TO_TIMESTAMP('2026-07-15 19:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-07-15 23:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-05-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-07-14 23:59:59', 'YYYY-MM-DD HH24:MI:SS'), 'Đang mở bán', 'LSK001', 'DD001', 65, 0, SYSTIMESTAMP, SYSTIMESTAMP)");
                 System.out.println("- Đã khởi tạo SUKIEN: SK001");
             } else {
-                jdbcTemplate.update("UPDATE SUKIEN SET TrangThaiSK = 'Đang mở bán' WHERE MaSK = 'SK001'");
+                jdbcTemplate.update("UPDATE SUKIEN SET TrangThaiSK = 'Đang mở bán', TongSoVe = 65, " +
+                        "ThoiGianBatDau = TO_TIMESTAMP('2026-07-15 19:00:00', 'YYYY-MM-DD HH24:MI:SS'), " +
+                        "ThoiGianKetThuc = TO_TIMESTAMP('2026-07-15 23:00:00', 'YYYY-MM-DD HH24:MI:SS'), " +
+                        "ThoiGianMoBan = TO_TIMESTAMP('2026-05-01 10:00:00', 'YYYY-MM-DD HH24:MI:SS'), " +
+                        "ThoiGianDongBan = TO_TIMESTAMP('2026-07-14 23:59:59', 'YYYY-MM-DD HH24:MI:SS'), " +
+                        "CapNhatLanCuoi = SYSTIMESTAMP WHERE MaSK = 'SK001'");
             }
 
             // 4. KHUVUC
             Integer countKVStandard = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM KHUVUC WHERE MaKhuVuc = 'KV001_A'", Integer.class);
             if (countKVStandard == null || countKVStandard == 0) {
-                jdbcTemplate.update("INSERT INTO KHUVUC (MaKhuVuc, TenKhuVuc, MauSacHienThi, SoGheToiDa, SoGheDaBan, SoVeToiDaPerKH, GiaVe, TrangThai, MaSK) VALUES ('KV001_A', 'Khu Standard', '#FF6B6B', 50, 1, 4, 300000, 'Đang bán', 'SK001')");
+                jdbcTemplate.update("INSERT INTO KHUVUC (MaKhuVuc, TenKhuVuc, MauSacHienThi, SoGheToiDa, SoGheDaBan, SoVeToiDaPerKH, GiaVe, TrangThai, MaSK) VALUES ('KV001_A', 'Khu Standard', '#FF6B6B', 50, 0, 4, 300000, 'Đang bán', 'SK001')");
             } else {
                 jdbcTemplate.update("UPDATE KHUVUC SET TenKhuVuc = 'Khu Standard', GiaVe = 300000, SoVeToiDaPerKH = 4 WHERE MaKhuVuc = 'KV001_A'");
             }
             
             Integer countKVVIP = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM KHUVUC WHERE MaKhuVuc = 'KV001_VIP'", Integer.class);
             if (countKVVIP == null || countKVVIP == 0) {
-                jdbcTemplate.update("INSERT INTO KHUVUC (MaKhuVuc, TenKhuVuc, MauSacHienThi, SoGheToiDa, SoGheDaBan, SoVeToiDaPerKH, GiaVe, TrangThai, MaSK) VALUES ('KV001_VIP', 'Khu VIP', '#FFD700', 15, 1, 2, 1000000, 'Đang bán', 'SK001')");
+                jdbcTemplate.update("INSERT INTO KHUVUC (MaKhuVuc, TenKhuVuc, MauSacHienThi, SoGheToiDa, SoGheDaBan, SoVeToiDaPerKH, GiaVe, TrangThai, MaSK) VALUES ('KV001_VIP', 'Khu VIP', '#FFD700', 15, 0, 2, 1000000, 'Đang bán', 'SK001')");
             } else {
                 jdbcTemplate.update("UPDATE KHUVUC SET TenKhuVuc = 'Khu VIP', GiaVe = 1000000, SoVeToiDaPerKH = 2 WHERE MaKhuVuc = 'KV001_VIP'");
             }
@@ -130,9 +254,8 @@ public class DataInitializer implements CommandLineRunner {
                     
                     Integer countGhe = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM GHENGOI WHERE MaGhe = ?", Integer.class, maGhe);
                     if (countGhe == null || countGhe == 0) {
-                        String defaultStatus = ("V".equals(r) && c == 1) ? "Đã bán" : "Trống";
-                        jdbcTemplate.update("INSERT INTO GHENGOI (MaGhe, TenGhe, HangGhe, CotGhe, TrangThaiGhe, MaKhuVuc, MaSK) VALUES (?, ?, ?, ?, ?, 'KV001_VIP', 'SK001')",
-                                maGhe, tenGhe, r, c, defaultStatus);
+                        jdbcTemplate.update("INSERT INTO GHENGOI (MaGhe, TenGhe, HangGhe, CotGhe, TrangThaiGhe, MaKhuVuc, MaSK) VALUES (?, ?, ?, ?, 'Trống', 'KV001_VIP', 'SK001')",
+                                maGhe, tenGhe, r, c);
                     }
                 }
             }
@@ -146,35 +269,13 @@ public class DataInitializer implements CommandLineRunner {
                     
                     Integer countGhe = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM GHENGOI WHERE MaGhe = ?", Integer.class, maGhe);
                     if (countGhe == null || countGhe == 0) {
-                        String defaultStatus = ("A".equals(r) && c == 1) ? "Đã bán" : "Trống";
-                        jdbcTemplate.update("INSERT INTO GHENGOI (MaGhe, TenGhe, HangGhe, CotGhe, TrangThaiGhe, MaKhuVuc, MaSK) VALUES (?, ?, ?, ?, ?, 'KV001_A', 'SK001')",
-                                maGhe, tenGhe, r, c, defaultStatus);
+                        jdbcTemplate.update("INSERT INTO GHENGOI (MaGhe, TenGhe, HangGhe, CotGhe, TrangThaiGhe, MaKhuVuc, MaSK) VALUES (?, ?, ?, ?, 'Trống', 'KV001_A', 'SK001')",
+                                maGhe, tenGhe, r, c);
                     }
                 }
             }
             System.out.println("- Đã khởi tạo GHENGOI");
-
-            // 6. DONHANG
-            Integer countDH = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM DONHANG WHERE MaDonHang = 'DH_20260501_001'", Integer.class);
-            if (countDH == null || countDH == 0) {
-                jdbcTemplate.update("INSERT INTO DONHANG (MaDonHang, SoDonHang, TongTien, ThanhTien, TrangThaiDonHang, ThoiGianDat, ThoiGianHetHan, MaKH) VALUES ('DH_20260501_001', 'SO-2026-001', 300000, 300000, 'Đã thanh toán', TO_TIMESTAMP('2026-05-01 10:05:00','YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-05-01 10:20:00','YYYY-MM-DD HH24:MI:SS'), 'KH-CUSTOMER')");
-                jdbcTemplate.update("INSERT INTO DONHANG (MaDonHang, SoDonHang, TongTien, ThanhTien, TrangThaiDonHang, ThoiGianDat, ThoiGianHetHan, MaKH) VALUES ('DH_20260501_002', 'SO-2026-002', 1000000, 1000000, 'Đã thanh toán', TO_TIMESTAMP('2026-05-01 10:10:00','YYYY-MM-DD HH24:MI:SS'), TO_TIMESTAMP('2026-05-01 10:25:00','YYYY-MM-DD HH24:MI:SS'), 'KH-CUSTOMER')");
-                System.out.println("- Đã khởi tạo DONHANG");
-            } else {
-                jdbcTemplate.update("UPDATE DONHANG SET TongTien = 300000, ThanhTien = 300000 WHERE MaDonHang = 'DH_20260501_001'");
-                jdbcTemplate.update("UPDATE DONHANG SET TongTien = 1000000, ThanhTien = 1000000 WHERE MaDonHang = 'DH_20260501_002'");
-            }
-
-            // 7. VE
-            Integer countVe = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM VE WHERE MaVe = 'VE_SK001_A01_001'", Integer.class);
-            if (countVe == null || countVe == 0) {
-                jdbcTemplate.update("INSERT INTO VE (MaVe, MaQR, GiaVe, TrangThaiVe, ThoiGianPhat, MaDonHang, MaGhe, MaSK) VALUES ('VE_SK001_A01_001', 'QR_HASH_SHA256_A01_ABCDEF1234567890', 300000, 'Chưa sử dụng', TO_TIMESTAMP('2026-05-01 10:06:00','YYYY-MM-DD HH24:MI:SS'), 'DH_20260501_001', 'KV001_A_A01', 'SK001')");
-                jdbcTemplate.update("INSERT INTO VE (MaVe, MaQR, GiaVe, TrangThaiVe, ThoiGianPhat, MaDonHang, MaGhe, MaSK) VALUES ('VE_SK001_VIP01_001', 'QR_HASH_SHA256_VIP01_FEDCBA9876543210', 1000000, 'Chưa sử dụng', TO_TIMESTAMP('2026-05-01 10:11:00','YYYY-MM-DD HH24:MI:SS'), 'DH_20260501_002', 'KV001_VIP_V01', 'SK001')");
-                System.out.println("- Đã khởi tạo VE test");
-            } else {
-                jdbcTemplate.update("UPDATE VE SET GiaVe = 300000 WHERE MaVe = 'VE_SK001_A01_001'");
-                jdbcTemplate.update("UPDATE VE SET GiaVe = 1000000 WHERE MaVe = 'VE_SK001_VIP01_001'");
-            }
+            System.out.println("- Seed master data sạch: không tạo DONHANG/VE runtime; vé sẽ phát sinh qua flow mua vé.");
         } catch (Exception e) {
             System.err.println("Lỗi khi khởi tạo dữ liệu mẫu: " + e.getMessage());
             e.printStackTrace();
@@ -211,6 +312,48 @@ public class DataInitializer implements CommandLineRunner {
             System.out.println("Tạo thành công user demo: " + username);
         } else {
             user = existing.get();
+            boolean changed = false;
+
+            if (user.getChiTietVaiTros() == null) {
+                user.setChiTietVaiTros(new ArrayList<>());
+                changed = true;
+            }
+
+            if (!"Đang hoạt động".equals(user.getTrangThaiND())) {
+                user.setTrangThaiND("Đang hoạt động");
+                changed = true;
+            }
+
+            if (user.getMatKhauMaHoa() == null || !passwordEncoder.matches(rawPassword, user.getMatKhauMaHoa())) {
+                user.setMatKhauMaHoa(passwordEncoder.encode(rawPassword));
+                changed = true;
+            }
+
+            if (user.getEmail() == null || user.getEmail().isBlank()) {
+                user.setEmail(username + "@ticketsystem.com");
+                changed = true;
+            }
+
+            boolean hasRole = user.getChiTietVaiTros().stream()
+                    .anyMatch(ct -> roleCode.equals(ct.getMaVaiTro()));
+            if (!hasRole) {
+                VaiTro role = vaiTroRepository.findById(roleCode).orElse(null);
+                if (role != null) {
+                    ChiTietVaiTro chiTiet = new ChiTietVaiTro();
+                    chiTiet.setNguoiDung(user);
+                    chiTiet.setVaiTro(role);
+                    chiTiet.setMaND(user.getMaND());
+                    chiTiet.setMaVaiTro(roleCode);
+                    user.getChiTietVaiTros().add(chiTiet);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                user.setCapNhatLanCuoi(new Timestamp(System.currentTimeMillis()));
+                user = nguoiDungRepository.saveAndFlush(user);
+                System.out.println("Đã chuẩn hóa user demo: " + username);
+            }
         }
 
         // 3. Khởi tạo KHACHHANG hoặc NHANVIEN tương ứng

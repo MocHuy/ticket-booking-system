@@ -15,6 +15,8 @@ import java.util.Map;
 @Service
 public class BaoCaoService {
 
+    private static final String TRANG_THAI_DA_THANH_TOAN = "Đã thanh toán";
+
     private final JdbcTemplate jdbcTemplate;
 
     public BaoCaoService(JdbcTemplate jdbcTemplate) {
@@ -22,344 +24,358 @@ public class BaoCaoService {
     }
 
     /**
-     * Lấy báo cáo tổng quan toàn hệ thống dựa trên bộ lọc
+     * Tổng quan báo cáo. Doanh thu/vé bán luôn chỉ tính đơn đã thanh toán.
      */
     public BaoCaoTongQuanDTO getBaoCaoTongQuan(String maSK, Timestamp tuNgay, Timestamp denNgay, String trangThaiDonHang) {
+        String selectedStatus = normalize(trangThaiDonHang);
+        boolean includePaidMetrics = selectedStatus == null || TRANG_THAI_DA_THANH_TOAN.equals(selectedStatus);
+
         BaoCaoTongQuanDTO dto = new BaoCaoTongQuanDTO();
+        dto.setTongDoanhThu(includePaidMetrics ? calculateTongDoanhThu(maSK, tuNgay, denNgay) : BigDecimal.ZERO);
+        dto.setTongVeDaBan(includePaidMetrics ? countPaidTickets(maSK, tuNgay, denNgay) : 0L);
 
-        // 1. Tổng doanh thu toàn hệ thống = SUM(DONHANG.ThanhTien) của các đơn có TrangThaiDonHang = 'Đã thanh toán'
-        String sqlDoanhThu = "SELECT COALESCE(SUM(dh.ThanhTien), 0) FROM DONHANG dh WHERE dh.TrangThaiDonHang = 'Đã thanh toán' ";
-        List<Object> paramsDT = new ArrayList<>();
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sqlDoanhThu += "AND dh.MaDonHang IN (SELECT DISTINCT v.MaDonHang FROM VE v WHERE v.MaSK = ?) ";
-            paramsDT.add(maSK);
-        }
-        if (tuNgay != null) {
-            sqlDoanhThu += "AND dh.ThoiGianDat >= ? ";
-            paramsDT.add(tuNgay);
-        }
-        if (denNgay != null) {
-            sqlDoanhThu += "AND dh.ThoiGianDat <= ? ";
-            paramsDT.add(denNgay);
-        }
-        BigDecimal tongDoanhThu = jdbcTemplate.queryForObject(sqlDoanhThu, BigDecimal.class, paramsDT.toArray());
-        dto.setTongDoanhThu(tongDoanhThu);
+        dto.setDonChoThanhToan(countDonHangByStatus("Chờ thanh toán", maSK, tuNgay, denNgay, selectedStatus));
+        dto.setDonDaThanhToan(countDonHangByStatus(TRANG_THAI_DA_THANH_TOAN, maSK, tuNgay, denNgay, selectedStatus));
+        dto.setDonDaHuy(countDonHangByStatus("Đã hủy", maSK, tuNgay, denNgay, selectedStatus));
 
-        // 2. Tổng vé đã bán = count VE thuộc đơn "Đã thanh toán"
-        String sqlVeDaBan = "SELECT COUNT(v.MaVe) FROM VE v JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang WHERE dh.TrangThaiDonHang = 'Đã thanh toán' ";
-        List<Object> paramsVe = new ArrayList<>();
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sqlVeDaBan += "AND v.MaSK = ? ";
-            paramsVe.add(maSK);
-        }
-        if (tuNgay != null) {
-            sqlVeDaBan += "AND dh.ThoiGianDat >= ? ";
-            paramsVe.add(tuNgay);
-        }
-        if (denNgay != null) {
-            sqlVeDaBan += "AND dh.ThoiGianDat <= ? ";
-            paramsVe.add(denNgay);
-        }
-        Long tongVeDaBan = jdbcTemplate.queryForObject(sqlVeDaBan, Long.class, paramsVe.toArray());
-        dto.setTongVeDaBan(tongVeDaBan != null ? tongVeDaBan : 0L);
+        long totalTransactions = countTransactions(maSK, tuNgay, denNgay, selectedStatus, null);
+        long successTransactions = countTransactions(maSK, tuNgay, denNgay, selectedStatus, "Thành công");
+        dto.setTyLeThanhToanThanhCong(totalTransactions > 0 ? (double) successTransactions / totalTransactions * 100.0 : 0.0);
 
-        // 3. Tổng số đơn theo trạng thái (chỉ áp dụng bộ lọc sự kiện và ngày)
-        dto.setDonChoThanhToan(countDonHangByStatus("Chờ thanh toán", maSK, tuNgay, denNgay));
-        dto.setDonDaThanhToan(countDonHangByStatus("Đã thanh toán", maSK, tuNgay, denNgay));
-        dto.setDonDaHuy(countDonHangByStatus("Đã hủy", maSK, tuNgay, denNgay));
-
-        // 4. Tỷ lệ thanh toán thành công = số giao dịch "Thành công" / tổng giao dịch * 100
-        String sqlGDThanhCong = "SELECT COUNT(gd.MaGiaoDich) FROM GIAODICHTHANHTOAN gd JOIN DONHANG dh ON gd.MaDonHang = dh.MaDonHang WHERE gd.TrangThaiGD = 'Thành công' ";
-        String sqlGDTong = "SELECT COUNT(gd.MaGiaoDich) FROM GIAODICHTHANHTOAN gd JOIN DONHANG dh ON gd.MaDonHang = dh.MaDonHang WHERE 1=1 ";
-        List<Object> paramsGD = new ArrayList<>();
-        
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            String subquery = "AND dh.MaDonHang IN (SELECT DISTINCT v.MaDonHang FROM VE v WHERE v.MaSK = ?) ";
-            sqlGDThanhCong += subquery;
-            sqlGDTong += subquery;
-            paramsGD.add(maSK);
-        }
-        if (tuNgay != null) {
-            String filterDate = "AND gd.ThoiGianThucHien >= ? ";
-            sqlGDThanhCong += filterDate;
-            sqlGDTong += filterDate;
-            paramsGD.add(tuNgay);
-        }
-        if (denNgay != null) {
-            String filterDate = "AND gd.ThoiGianThucHien <= ? ";
-            sqlGDThanhCong += filterDate;
-            sqlGDTong += filterDate;
-            paramsGD.add(denNgay);
-        }
-        if (trangThaiDonHang != null && !trangThaiDonHang.trim().isEmpty()) {
-            String filterStatus = "AND dh.TrangThaiDonHang = ? ";
-            sqlGDThanhCong += filterStatus;
-            sqlGDTong += filterStatus;
-            paramsGD.add(trangThaiDonHang);
-        }
-
-        Long countGDThanhCong = jdbcTemplate.queryForObject(sqlGDThanhCong, Long.class, paramsGD.toArray());
-        Long countGDTong = jdbcTemplate.queryForObject(sqlGDTong, Long.class, paramsGD.toArray());
-
-        double tyLeThanhToanThanhCong = 0.0;
-        if (countGDTong != null && countGDTong > 0) {
-            tyLeThanhToanThanhCong = (countGDThanhCong != null ? countGDThanhCong : 0.0) / countGDTong * 100.0;
-        }
-        dto.setTyLeThanhToanThanhCong(tyLeThanhToanThanhCong);
-
-        // 5. Tỷ lệ lấp đầy trung bình = SoVeDaBan / TongSoVe * 100 (tính gộp trên các sự kiện tương ứng)
-        String sqlTongVeSK = "SELECT COALESCE(SUM(TongSoVe), 0) FROM SUKIEN WHERE 1=1 ";
-        List<Object> paramsSK = new ArrayList<>();
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sqlTongVeSK += "AND MaSK = ? ";
-            paramsSK.add(maSK);
-        }
-        Long totalTongSoVe = jdbcTemplate.queryForObject(sqlTongVeSK, Long.class, paramsSK.toArray());
-
-        double tyLeLapDayTB = 0.0;
-        if (totalTongSoVe != null && totalTongSoVe > 0) {
-            tyLeLapDayTB = (double) dto.getTongVeDaBan() / totalTongSoVe * 100.0;
-        }
-        dto.setTyLeLapDayTB(tyLeLapDayTB);
-
-        // 6. Sự kiện bán chạy nhất = Sự kiện có lượng vé bán ra nhiều nhất trong khoảng thời gian lọc
-        String sqlBestSeller = "SELECT sk.TenSK, COUNT(v.MaVe) AS SoldCount " +
-                "FROM VE v " +
-                "JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang " +
-                "JOIN SUKIEN sk ON v.MaSK = sk.MaSK " +
-                "WHERE dh.TrangThaiDonHang = 'Đã thanh toán' ";
-        List<Object> paramsBest = new ArrayList<>();
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sqlBestSeller += "AND v.MaSK = ? ";
-            paramsBest.add(maSK);
-        }
-        if (tuNgay != null) {
-            sqlBestSeller += "AND dh.ThoiGianDat >= ? ";
-            paramsBest.add(tuNgay);
-        }
-        if (denNgay != null) {
-            sqlBestSeller += "AND dh.ThoiGianDat <= ? ";
-            paramsBest.add(denNgay);
-        }
-        sqlBestSeller += "GROUP BY sk.TenSK ORDER BY SoldCount DESC ";
-
-        List<Map<String, Object>> bestResult = jdbcTemplate.queryForList(sqlBestSeller, paramsBest.toArray());
-        if (!bestResult.isEmpty()) {
-            Map<String, Object> topEvent = bestResult.get(0);
-            dto.setSuKienBanChayNhat(String.valueOf(topEvent.get("TENSK")));
-        } else {
-            dto.setSuKienBanChayNhat("Chưa có");
-        }
+        long tongSoVe = sumTongSoVe(maSK);
+        dto.setTyLeLapDayTB(tongSoVe > 0 ? (double) dto.getTongVeDaBan() / tongSoVe * 100.0 : 0.0);
+        dto.setSuKienBanChayNhat(includePaidMetrics ? findBestSellerEvent(maSK, tuNgay, denNgay) : "Chưa có");
 
         return dto;
     }
 
     /**
-     * Đếm số lượng đơn hàng theo trạng thái và bộ lọc
+     * A. Tổng doanh thu toàn hệ thống:
+     * SELECT SUM(DONHANG.ThanhTien) WHERE TrangThaiDonHang = 'Đã thanh toán'.
+     * Khi lọc một sự kiện cụ thể, dùng SUM(VE.GiaVe) để phần doanh thu của sự kiện
+     * không lấy nhầm toàn bộ giá trị đơn nếu sau này một đơn chứa vé của nhiều sự kiện.
      */
-    private long countDonHangByStatus(String status, String maSK, Timestamp tuNgay, Timestamp denNgay) {
-        String sql = "SELECT COUNT(dh.MaDonHang) FROM DONHANG dh WHERE dh.TrangThaiDonHang = ? ";
+    private BigDecimal calculateTongDoanhThu(String maSK, Timestamp tuNgay, Timestamp denNgay) {
         List<Object> params = new ArrayList<>();
-        params.add(status);
+        String selectedEvent = normalize(maSK);
+        StringBuilder sql = new StringBuilder();
 
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sql += "AND dh.MaDonHang IN (SELECT DISTINCT v.MaDonHang FROM VE v WHERE v.MaSK = ?) ";
-            params.add(maSK);
+        if (selectedEvent == null) {
+            sql.append("SELECT COALESCE(SUM(dh.ThanhTien), 0) ")
+                    .append("FROM DONHANG dh ")
+                    .append("WHERE dh.TrangThaiDonHang = ? ");
+            params.add(TRANG_THAI_DA_THANH_TOAN);
+            appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+        } else {
+            sql.append("SELECT COALESCE(SUM(v.GiaVe), 0) ")
+                    .append("FROM VE v ")
+                    .append("JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang ")
+                    .append("WHERE dh.TrangThaiDonHang = ? AND v.MaSK = ? ");
+            params.add(TRANG_THAI_DA_THANH_TOAN);
+            params.add(selectedEvent);
+            appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
         }
-        if (tuNgay != null) {
-            sql += "AND dh.ThoiGianDat >= ? ";
-            params.add(tuNgay);
-        }
-        if (denNgay != null) {
-            sql += "AND dh.ThoiGianDat <= ? ";
-            params.add(denNgay);
-        }
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, params.toArray());
-        return count != null ? count : 0L;
+
+        BigDecimal value = jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     /**
-     * Bảng báo cáo theo từng sự kiện
+     * C. Tổng vé đã bán = COUNT(VE) thuộc đơn đã thanh toán.
+     */
+    private long countPaidTickets(String maSK, Timestamp tuNgay, Timestamp denNgay) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(v.MaVe) ")
+                .append("FROM VE v ")
+                .append("JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang ")
+                .append("WHERE dh.TrangThaiDonHang = ? ");
+        List<Object> params = new ArrayList<>();
+        params.add(TRANG_THAI_DA_THANH_TOAN);
+
+        if (normalize(maSK) != null) {
+            sql.append("AND v.MaSK = ? ");
+            params.add(normalize(maSK));
+        }
+        appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+
+        return queryLong(sql.toString(), params);
+    }
+
+    private long countDonHangByStatus(String status, String maSK, Timestamp tuNgay, Timestamp denNgay, String selectedStatus) {
+        if (selectedStatus != null && !selectedStatus.equals(status)) {
+            return 0L;
+        }
+
+        StringBuilder sql = new StringBuilder("SELECT COUNT(dh.MaDonHang) FROM DONHANG dh WHERE dh.TrangThaiDonHang = ? ");
+        List<Object> params = new ArrayList<>();
+        params.add(status);
+
+        appendEventExistsFilter(sql, params, "dh", maSK);
+        appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+
+        return queryLong(sql.toString(), params);
+    }
+
+    /**
+     * E. Tỷ lệ thanh toán thành công = COUNT(GD Thành công) / COUNT(tất cả GD).
+     */
+    private long countTransactions(String maSK, Timestamp tuNgay, Timestamp denNgay, String orderStatus, String transactionStatus) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(gd.MaGiaoDich) ")
+                .append("FROM GIAODICHTHANHTOAN gd ")
+                .append("JOIN DONHANG dh ON gd.MaDonHang = dh.MaDonHang ")
+                .append("WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+
+        appendEventExistsFilter(sql, params, "dh", maSK);
+        if (tuNgay != null) {
+            sql.append("AND gd.ThoiGianThucHien >= ? ");
+            params.add(tuNgay);
+        }
+        if (denNgay != null) {
+            sql.append("AND gd.ThoiGianThucHien <= ? ");
+            params.add(denNgay);
+        }
+        if (orderStatus != null) {
+            sql.append("AND dh.TrangThaiDonHang = ? ");
+            params.add(orderStatus);
+        }
+        if (transactionStatus != null) {
+            sql.append("AND gd.TrangThaiGD = ? ");
+            params.add(transactionStatus);
+        }
+
+        return queryLong(sql.toString(), params);
+    }
+
+    private long sumTongSoVe(String maSK) {
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(SUM(TongSoVe), 0) FROM SUKIEN WHERE 1=1 ");
+        List<Object> params = new ArrayList<>();
+        if (normalize(maSK) != null) {
+            sql.append("AND MaSK = ? ");
+            params.add(normalize(maSK));
+        }
+        return queryLong(sql.toString(), params);
+    }
+
+    private String findBestSellerEvent(String maSK, Timestamp tuNgay, Timestamp denNgay) {
+        StringBuilder sql = new StringBuilder()
+                .append("SELECT * FROM ( ")
+                .append("  SELECT sk.TenSK, COUNT(v.MaVe) AS SoldCount ")
+                .append("  FROM VE v ")
+                .append("  JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang ")
+                .append("  JOIN SUKIEN sk ON v.MaSK = sk.MaSK ")
+                .append("  WHERE dh.TrangThaiDonHang = ? ");
+        List<Object> params = new ArrayList<>();
+        params.add(TRANG_THAI_DA_THANH_TOAN);
+
+        if (normalize(maSK) != null) {
+            sql.append("AND v.MaSK = ? ");
+            params.add(normalize(maSK));
+        }
+        appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+
+        sql.append("  GROUP BY sk.TenSK ")
+                .append("  ORDER BY SoldCount DESC ")
+                .append(") WHERE ROWNUM <= 1");
+
+        List<Map<String, Object>> result = jdbcTemplate.queryForList(sql.toString(), params.toArray());
+        if (result.isEmpty() || result.get(0).get("TENSK") == null) {
+            return "Chưa có";
+        }
+        return String.valueOf(result.get(0).get("TENSK"));
+    }
+
+    /**
+     * Bảng báo cáo theo từng sự kiện.
      */
     public List<BaoCaoSuKienDTO> getBaoCaoSuKien(String maSK, Timestamp tuNgay, Timestamp denNgay, String trangThaiDonHang) {
-        String sqlSK = "SELECT MaSK, TenSK, TongSoVe FROM SUKIEN WHERE 1=1 ";
-        List<Object> paramsSK = new ArrayList<>();
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sqlSK += "AND MaSK = ? ";
-            paramsSK.add(maSK);
-        }
-        sqlSK += "ORDER BY TenSK ASC";
+        String selectedStatus = normalize(trangThaiDonHang);
+        boolean includePaidMetrics = selectedStatus == null || TRANG_THAI_DA_THANH_TOAN.equals(selectedStatus);
 
-        List<Map<String, Object>> listSK = jdbcTemplate.queryForList(sqlSK, paramsSK.toArray());
+        StringBuilder sqlSK = new StringBuilder("SELECT MaSK, TenSK, TongSoVe FROM SUKIEN WHERE 1=1 ");
+        List<Object> paramsSK = new ArrayList<>();
+        if (normalize(maSK) != null) {
+            sqlSK.append("AND MaSK = ? ");
+            paramsSK.add(normalize(maSK));
+        }
+        sqlSK.append("ORDER BY TenSK ASC");
+
+        List<Map<String, Object>> events = jdbcTemplate.queryForList(sqlSK.toString(), paramsSK.toArray());
         List<BaoCaoSuKienDTO> reportList = new ArrayList<>();
 
-        for (Map<String, Object> row : listSK) {
-            String skCode = String.valueOf(row.get("MASK"));
-            String skName = String.valueOf(row.get("TENSK"));
-            Number tongVeNum = (Number) row.get("TONGSOVE");
-            long tongSoVe = tongVeNum != null ? tongVeNum.longValue() : 0L;
+        for (Map<String, Object> row : events) {
+            String eventId = valueAsString(row.get("MASK"));
+            long tongSoVe = valueAsLong(row.get("TONGSOVE"));
 
-            BaoCaoSuKienDTO eventReport = new BaoCaoSuKienDTO();
-            eventReport.setMaSK(skCode);
-            eventReport.setTenSK(skName);
-            eventReport.setTongSoVe(tongSoVe);
+            BaoCaoSuKienDTO dto = new BaoCaoSuKienDTO();
+            dto.setMaSK(eventId);
+            dto.setTenSK(valueAsString(row.get("TENSK")));
+            dto.setTongSoVe(tongSoVe);
 
-            // 1. Số vé đã bán trong kỳ = count VE thuộc đơn "Đã thanh toán"
-            String sqlSold = "SELECT COUNT(v.MaVe) FROM VE v JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang " +
-                    "WHERE v.MaSK = ? AND dh.TrangThaiDonHang = 'Đã thanh toán' ";
-            List<Object> paramsSold = new ArrayList<>();
-            paramsSold.add(skCode);
-            if (tuNgay != null) {
-                sqlSold += "AND dh.ThoiGianDat >= ? ";
-                paramsSold.add(tuNgay);
-            }
-            if (denNgay != null) {
-                sqlSold += "AND dh.ThoiGianDat <= ? ";
-                paramsSold.add(denNgay);
-            }
-            if (trangThaiDonHang != null && !trangThaiDonHang.trim().isEmpty()) {
-                sqlSold += "AND dh.TrangThaiDonHang = ? ";
-                paramsSold.add(trangThaiDonHang);
-            }
-            Long soVeDaBan = jdbcTemplate.queryForObject(sqlSold, Long.class, paramsSold.toArray());
-            long veDaBan = soVeDaBan != null ? soVeDaBan : 0L;
-            eventReport.setSoVeDaBan(veDaBan);
+            long veDaBan = includePaidMetrics ? countPaidTickets(eventId, tuNgay, denNgay) : 0L;
+            dto.setSoVeDaBan(veDaBan);
+            dto.setSoVeConLai(Math.max(tongSoVe - veDaBan, 0L));
+            dto.setDoanhThu(includePaidMetrics ? calculateEventRevenue(eventId, tuNgay, denNgay) : BigDecimal.ZERO);
+            dto.setTyLeLapDay(tongSoVe > 0 ? (double) veDaBan / tongSoVe * 100.0 : 0.0);
 
-            // 2. Số vé còn lại
-            long veConLai = tongSoVe - veDaBan;
-            eventReport.setSoVeConLai(veConLai < 0 ? 0L : veConLai);
+            dto.setLuotXem(countHanhDong(eventId, "XEM_SK", tuNgay, denNgay));
+            dto.setLuotClick(countHanhDong(eventId, "CLICK_DAT_VE", tuNgay, denNgay));
+            dto.setLuotBoGioHang(countHanhDong(eventId, "BO_GIO_HANG", tuNgay, denNgay));
 
-            // 3. Doanh thu theo sự kiện: Dùng SUM(VE.GiaVe) Join VE -> DONHANG chỉ lấy vé thuộc đơn "Đã thanh toán"
-            String sqlRevenue = "SELECT COALESCE(SUM(v.GiaVe), 0) FROM VE v JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang " +
-                    "WHERE v.MaSK = ? AND dh.TrangThaiDonHang = 'Đã thanh toán' ";
-            List<Object> paramsRev = new ArrayList<>();
-            paramsRev.add(skCode);
-            if (tuNgay != null) {
-                sqlRevenue += "AND dh.ThoiGianDat >= ? ";
-                paramsRev.add(tuNgay);
-            }
-            if (denNgay != null) {
-                sqlRevenue += "AND dh.ThoiGianDat <= ? ";
-                paramsRev.add(denNgay);
-            }
-            if (trangThaiDonHang != null && !trangThaiDonHang.trim().isEmpty()) {
-                sqlRevenue += "AND dh.TrangThaiDonHang = ? ";
-                paramsRev.add(trangThaiDonHang);
-            }
-            BigDecimal doanhThu = jdbcTemplate.queryForObject(sqlRevenue, BigDecimal.class, paramsRev.toArray());
-            eventReport.setDoanhThu(doanhThu);
+            long paidOrders = includePaidMetrics ? countPaidOrdersByEvent(eventId, tuNgay, denNgay) : 0L;
+            dto.setTyLeChuyenDoi(dto.getLuotXem() > 0 ? (double) paidOrders / dto.getLuotXem() * 100.0 : 0.0);
 
-            // 4. Tỷ lệ lấp đầy = SoVeDaBan / TongSoVe * 100. Nếu TongSoVe = 0 thì trả 0.
-            double tyLeLapDay = 0.0;
-            if (tongSoVe > 0) {
-                tyLeLapDay = (double) veDaBan / tongSoVe * 100.0;
-            }
-            eventReport.setTyLeLapDay(tyLeLapDay);
-
-            // 5. Nhật ký hành vi: lượt xem, lượt click, lượt bỏ giỏ hàng
-            eventReport.setLuotXem(countHanhHanhDong(skCode, "XEM_SK", tuNgay, denNgay));
-            eventReport.setLuotClick(countHanhHanhDong(skCode, "CLICK_DAT_VE", tuNgay, denNgay));
-            eventReport.setLuotBoGioHang(countHanhHanhDong(skCode, "BO_GIO_HANG", tuNgay, denNgay));
-
-            // 6. Tỷ lệ chuyển đổi = số đơn "Đã thanh toán" của sự kiện / số lượt "XEM_SK" * 100. Nếu XEM_SK = 0 thì trả 0.
-            String sqlPaidOrdersCount = "SELECT COUNT(DISTINCT dh.MaDonHang) FROM DONHANG dh JOIN VE v ON v.MaDonHang = dh.MaDonHang " +
-                    "WHERE v.MaSK = ? AND dh.TrangThaiDonHang = 'Đã thanh toán' ";
-            List<Object> paramsPaid = new ArrayList<>();
-            paramsPaid.add(skCode);
-            if (tuNgay != null) {
-                sqlPaidOrdersCount += "AND dh.ThoiGianDat >= ? ";
-                paramsPaid.add(tuNgay);
-            }
-            if (denNgay != null) {
-                sqlPaidOrdersCount += "AND dh.ThoiGianDat <= ? ";
-                paramsPaid.add(denNgay);
-            }
-            if (trangThaiDonHang != null && !trangThaiDonHang.trim().isEmpty()) {
-                sqlPaidOrdersCount += "AND dh.TrangThaiDonHang = ? ";
-                paramsPaid.add(trangThaiDonHang);
-            }
-            Long countPaidOrders = jdbcTemplate.queryForObject(sqlPaidOrdersCount, Long.class, paramsPaid.toArray());
-            long paidOrders = countPaidOrders != null ? countPaidOrders : 0L;
-
-            double tyLeChuyenDoi = 0.0;
-            if (eventReport.getLuotXem() > 0) {
-                tyLeChuyenDoi = (double) paidOrders / eventReport.getLuotXem() * 100.0;
-            }
-            eventReport.setTyLeChuyenDoi(tyLeChuyenDoi);
-
-            reportList.add(eventReport);
+            reportList.add(dto);
         }
 
         return reportList;
     }
 
     /**
-     * Đếm số lượt hành động cụ thể theo sự kiện và khoảng thời gian
+     * B. Doanh thu theo sự kiện = SUM(VE.GiaVe), không SUM(DONHANG.ThanhTien)
+     * sau khi join nhiều vé.
      */
-    private long countHanhHanhDong(String maSK, String loaiHanhDong, Timestamp tuNgay, Timestamp denNgay) {
-        String sql = "SELECT COUNT(MaLog) FROM LOG_HANH_VI WHERE MaSK = ? AND LoaiHanhDong = ? ";
+    private BigDecimal calculateEventRevenue(String maSK, Timestamp tuNgay, Timestamp denNgay) {
+        StringBuilder sql = new StringBuilder("SELECT COALESCE(SUM(v.GiaVe), 0) ")
+                .append("FROM VE v ")
+                .append("JOIN DONHANG dh ON v.MaDonHang = dh.MaDonHang ")
+                .append("WHERE dh.TrangThaiDonHang = ? AND v.MaSK = ? ");
+        List<Object> params = new ArrayList<>();
+        params.add(TRANG_THAI_DA_THANH_TOAN);
+        params.add(maSK);
+        appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+
+        BigDecimal value = jdbcTemplate.queryForObject(sql.toString(), BigDecimal.class, params.toArray());
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    private long countPaidOrdersByEvent(String maSK, Timestamp tuNgay, Timestamp denNgay) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(DISTINCT dh.MaDonHang) ")
+                .append("FROM DONHANG dh ")
+                .append("JOIN VE v ON v.MaDonHang = dh.MaDonHang ")
+                .append("WHERE v.MaSK = ? AND dh.TrangThaiDonHang = ? ");
+        List<Object> params = new ArrayList<>();
+        params.add(maSK);
+        params.add(TRANG_THAI_DA_THANH_TOAN);
+        appendOrderDateFilter(sql, params, "dh", tuNgay, denNgay);
+        return queryLong(sql.toString(), params);
+    }
+
+    private long countHanhDong(String maSK, String loaiHanhDong, Timestamp tuNgay, Timestamp denNgay) {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(MaLog) FROM LOG_HANH_VI WHERE MaSK = ? AND LoaiHanhDong = ? ");
         List<Object> params = new ArrayList<>();
         params.add(maSK);
         params.add(loaiHanhDong);
 
         if (tuNgay != null) {
-            sql += "AND ThoiGian >= ? ";
+            sql.append("AND ThoiGian >= ? ");
             params.add(tuNgay);
         }
         if (denNgay != null) {
-            sql += "AND ThoiGian <= ? ";
+            sql.append("AND ThoiGian <= ? ");
             params.add(denNgay);
         }
-        Long count = jdbcTemplate.queryForObject(sql, Long.class, params.toArray());
-        return count != null ? count : 0L;
+
+        return queryLong(sql.toString(), params);
     }
 
     /**
-     * Danh sách 50 hành vi khách hàng gần nhất
+     * Danh sách 50 hành vi khách hàng gần nhất.
      */
     public List<HanhViKhachHangDTO> getRecentHanhViKhachHang(String maSK, Timestamp tuNgay, Timestamp denNgay) {
-        String sql = "SELECT * FROM ( " +
-                "  SELECT l.MaLog, l.LoaiHanhDong, l.MaSK, sk.TenSK, l.ThoiGian, l.MaKH, nd.TenTaiKhoan, l.ThietBi " +
-                "  FROM LOG_HANH_VI l " +
-                "  LEFT JOIN SUKIEN sk ON l.MaSK = sk.MaSK " +
-                "  LEFT JOIN KHACHHANG kh ON l.MaKH = kh.MaKH " +
-                "  LEFT JOIN NGUOIDUNG nd ON kh.MaND = nd.MaND " +
-                "  WHERE 1=1 ";
+        StringBuilder sql = new StringBuilder()
+                .append("SELECT * FROM ( ")
+                .append("  SELECT l.MaLog, l.LoaiHanhDong, l.MaSK, sk.TenSK, l.ThoiGian, l.MaKH, nd.TenTaiKhoan, l.ThietBi ")
+                .append("  FROM LOG_HANH_VI l ")
+                .append("  LEFT JOIN SUKIEN sk ON l.MaSK = sk.MaSK ")
+                .append("  LEFT JOIN KHACHHANG kh ON l.MaKH = kh.MaKH ")
+                .append("  LEFT JOIN NGUOIDUNG nd ON kh.MaND = nd.MaND ")
+                .append("  WHERE l.LoaiHanhDong IN ('XEM_SK', 'CLICK_DAT_VE', 'BO_GIO_HANG') ");
         List<Object> params = new ArrayList<>();
 
-        if (maSK != null && !maSK.trim().isEmpty()) {
-            sql += "AND l.MaSK = ? ";
-            params.add(maSK);
+        if (normalize(maSK) != null) {
+            sql.append("AND l.MaSK = ? ");
+            params.add(normalize(maSK));
         }
         if (tuNgay != null) {
-            sql += "AND l.ThoiGian >= ? ";
+            sql.append("AND l.ThoiGian >= ? ");
             params.add(tuNgay);
         }
         if (denNgay != null) {
-            sql += "AND l.ThoiGian <= ? ";
+            sql.append("AND l.ThoiGian <= ? ");
             params.add(denNgay);
         }
 
-        sql += "  ORDER BY l.ThoiGian DESC " +
-                ") WHERE ROWNUM <= 50";
+        sql.append("  ORDER BY l.ThoiGian DESC ")
+                .append(") WHERE ROWNUM <= 50");
 
-        List<Map<String, Object>> queryResult = jdbcTemplate.queryForList(sql, params.toArray());
+        List<Map<String, Object>> queryResult = jdbcTemplate.queryForList(sql.toString(), params.toArray());
         List<HanhViKhachHangDTO> logs = new ArrayList<>();
 
         for (Map<String, Object> row : queryResult) {
             HanhViKhachHangDTO logDto = new HanhViKhachHangDTO();
-            logDto.setMaLog(String.valueOf(row.get("MALOG")));
-            logDto.setLoaiHanhDong(String.valueOf(row.get("LOAIHANHDONG")));
-            logDto.setMaSK(row.get("MASK") != null ? String.valueOf(row.get("MASK")) : "");
-            logDto.setTenSK(row.get("TENSK") != null ? String.valueOf(row.get("TENSK")) : "Hệ thống");
+            logDto.setMaLog(valueAsString(row.get("MALOG")));
+            logDto.setLoaiHanhDong(valueAsString(row.get("LOAIHANHDONG")));
+            logDto.setMaSK(row.get("MASK") != null ? valueAsString(row.get("MASK")) : "");
+            logDto.setTenSK(row.get("TENSK") != null ? valueAsString(row.get("TENSK")) : "Hệ thống");
             logDto.setThoiGian((Timestamp) row.get("THOIGIAN"));
-            logDto.setMaKH(row.get("MAKH") != null ? String.valueOf(row.get("MAKH")) : null);
-            logDto.setTenKH(row.get("TENTAIKHOAN") != null ? String.valueOf(row.get("TENTAIKHOAN")) : "Khách vãng lai");
-            logDto.setThietBi(row.get("THIETBI") != null ? String.valueOf(row.get("THIETBI")) : "Web");
-
+            logDto.setMaKH(row.get("MAKH") != null ? valueAsString(row.get("MAKH")) : null);
+            logDto.setTenKH(row.get("TENTAIKHOAN") != null ? valueAsString(row.get("TENTAIKHOAN")) : "Khách vãng lai");
+            logDto.setThietBi(row.get("THIETBI") != null ? valueAsString(row.get("THIETBI")) : "Web");
             logs.add(logDto);
         }
 
         return logs;
+    }
+
+    private void appendEventExistsFilter(StringBuilder sql, List<Object> params, String orderAlias, String maSK) {
+        if (normalize(maSK) == null) {
+            return;
+        }
+        sql.append("AND EXISTS (SELECT 1 FROM VE v_event WHERE v_event.MaDonHang = ")
+                .append(orderAlias)
+                .append(".MaDonHang AND v_event.MaSK = ?) ");
+        params.add(normalize(maSK));
+    }
+
+    private void appendOrderDateFilter(StringBuilder sql, List<Object> params, String orderAlias, Timestamp tuNgay, Timestamp denNgay) {
+        if (tuNgay != null) {
+            sql.append("AND ").append(orderAlias).append(".ThoiGianDat >= ? ");
+            params.add(tuNgay);
+        }
+        if (denNgay != null) {
+            sql.append("AND ").append(orderAlias).append(".ThoiGianDat <= ? ");
+            params.add(denNgay);
+        }
+    }
+
+    private long queryLong(String sql, List<Object> params) {
+        Long value = jdbcTemplate.queryForObject(sql, Long.class, params.toArray());
+        return value != null ? value : 0L;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String clean = value.trim();
+        return clean.isEmpty() ? null : clean;
+    }
+
+    private String valueAsString(Object value) {
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private long valueAsLong(Object value) {
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value == null) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
     }
 }

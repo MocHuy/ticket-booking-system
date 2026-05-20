@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 <head>
     <meta charset="UTF-8">
     <title>Thanh toán - Dề Dê Tickets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <th:block layout:fragment="page-css">
     <style>
-        body { background: #f8fafc; }
-        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .checkout-container { max-width: 800px; margin: 0 auto; }
         .checkout-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; }
         .checkout-header { background: #1e3a8a; color: white; padding: 20px 30px; text-align: center; }
-        .checkout-header h2 { margin: 0; font-family: 'DM Serif Display', serif; }
+        .checkout-header h2 { margin: 0; font-family: "Be Vietnam Pro", "Inter", sans-serif; font-weight: 800; }
         .timer-box { font-size: 24px; font-weight: bold; color: #fbbf24; margin-top: 10px; }
         
         .checkout-body { padding: 30px; }
@@ -30,16 +30,12 @@
         .btn-cancel { background: #64748b; }
         .btn-cancel:hover { background: #475569; }
         
-        .navbar-public { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .navbar-brand { font-size: 24px; font-weight: bold; color: #2563eb; text-decoration: none; }
     </style>
+    </th:block>
 </head>
 <body>
-    <nav class="navbar-public">
-        <a href="/" class="navbar-brand"><i class="fa-solid fa-ticket"></i> Dề Dê Tickets</a>
-    </nav>
-
-    <div class="container">
+<main layout:fragment="content">
+    <div class="checkout-container">
         <div class="checkout-card">
             <div class="checkout-header">
                 <h2>Hoàn Tất Thanh Toán</h2>
@@ -47,7 +43,7 @@
             </div>
             
             <div class="checkout-body">
-                <h3 style="margin-top:0; color: #1e3a8a; font-family: 'DM Serif Display', serif;">Thông tin đơn hàng</h3>
+                <h3 style="margin-top:0; color: #1e3a8a; font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 800;">Thông tin đơn hàng</h3>
                 
                 <div class="info-row">
                     <span class="info-label">Mã đơn hàng:</span>
@@ -70,7 +66,17 @@
                 
                 <div class="info-row">
                     <span class="info-label">Khách hàng:</span>
-                    <span class="info-value" th:text="${session.tenTaiKhoan != null ? session.tenTaiKhoan + ' (' + session.maKH + ')' : 'Chưa đăng nhập'}">Demo User (KH001)</span>
+                    <span class="info-value">
+                        <span th:if="${session.maKH != null}">
+                            <span th:text="${session.tenTaiKhoan ?: 'Khách hàng'}">Khách hàng</span>
+                            <span th:text="|(${session.maKH})|">(KH)</span>
+                        </span>
+                        <span th:if="${session.maKH == null}">
+                            <span th:if="${session.tenTaiKhoan != null}" th:text="${session.tenTaiKhoan}">Khách hàng</span>
+                            <span th:if="${session.tenTaiKhoan != null}"> - </span>
+                            <span>Chưa xác định khách hàng</span>
+                        </span>
+                    </span>
                 </div>
                 
                 <!-- Thống kê số lần thanh toán và lỗi -->
@@ -247,5 +253,6 @@
             }
         }
     </script>
+</main>
 </body>
 </html>

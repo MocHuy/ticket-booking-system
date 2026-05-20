@@ -1,78 +1,20 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Sự Kiện - Dề Dê Tickets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/pages/QLSK.css}">
+    <th:block layout:fragment="page-css">
+        <link rel="stylesheet" th:href="@{/css/pages/QLSK.css}">
+    </th:block>
 </head>
 
 <body>
-    <div class="layout-wrapper">
-
-        <!-- ===================== SIDEBAR ===================== -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-icon"><i class="fa-solid fa-ticket"></i></div>
-                <span class="brand-name">Dề Dê Tickets</span>
-            </div>
-
-            <nav class="sidebar-nav">
-                <ul>
-                    <li><span class="nav-label">Quản lý hệ thống</span></li>
-                    <li>
-                        <a href="/taikhoan">
-                            <i class="fa-solid fa-users"></i>
-                            <span>Quản lý Tài khoản</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/sukien" class="active">
-                            <i class="fa-solid fa-calendar-days"></i>
-                            <span>Quản lý Sự kiện</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/donhang">
-                            <i class="fa-solid fa-receipt"></i>
-                            <span>Quản lý Đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/ve">
-                            <i class="fa-solid fa-ticket-simple"></i>
-                            <span>Quản lý Vé</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-qrcode"></i>
-                            <span>Soát vé</span>
-                        </a>
-                    </li>
-                    <li><span class="nav-label">Phân tích</span></li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-chart-line"></i>
-                            <span>Báo cáo & Thống kê</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="sidebar-footer">
-                <form action="/dang-xuat" method="post">
-                    <button type="submit" class="btn-logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                        <span>Đăng xuất</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
-
-        <!-- ===================== MAIN CONTENT ===================== -->
+<div layout:fragment="content" class="admin-page">
+<!-- ===================== MAIN CONTENT ===================== -->
         <main class="main-content">
 
             <!-- Header -->
@@ -191,8 +133,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
     <!-- ===================== MODAL THÊM / SỬA ===================== -->
     <div id="eventModal" class="modal-overlay">
         <div class="modal-box">
@@ -242,7 +182,8 @@
 
                         <div class="form-group">
                             <label>Tổng Số Vé</label>
-                            <input type="number" id="m_tongSoVe" name="tongSoVe" value="0" class="form-control">
+                            <input type="number" id="m_tongSoVe" name="tongSoVe" value="0" class="form-control" readonly
+                                   title="Tổng số vé được cập nhật từ sơ đồ ghế, không chỉnh ở form thông tin sự kiện.">
                         </div>
                         <div class="form-group">
                             <label>Trạng Thái</label>
@@ -381,20 +322,38 @@
             modal.classList.add('open');
         }
 
-        function formatForInput(timestampStr) {
-            if (!timestampStr) return '';
-            const dt = new Date(timestampStr);
-            dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
-            return dt.toISOString().slice(0, 16);
+        function formatForDateTimeLocal(value) {
+            if (!value) return '';
+            let s = String(value).trim();
+
+            // Oracle/Hibernate có thể trả về: yyyy-MM-dd HH:mm:ss.0
+            if (s.includes('.')) {
+                s = s.split('.')[0];
+            }
+
+            if (s.endsWith('Z')) {
+                s = s.substring(0, s.length - 1);
+            }
+
+            s = s.replace(' ', 'T');
+
+            if (s.length >= 16) {
+                return s.substring(0, 16);
+            }
+
+            return '';
         }
 
         function moModalSua(maSK) {
             document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen" style="margin-right:8px;color:#eab308;"></i>Cập Nhật Sự Kiện';
-            form.action = '/sukien/cap-nhat/' + maSK;
+            form.action = '/sukien/update';
             form.reset();
 
             fetch('/sukien/api/' + maSK)
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('Không thể tải dữ liệu sự kiện');
+                    return r.json();
+                })
                 .then(d => {
                     document.getElementById('m_maSK').value = d.maSK || '';
                     document.getElementById('m_tenSK').value = d.tenSK || '';
@@ -409,10 +368,10 @@
                     document.getElementById('m_maLoaiSK').value = d.maLoaiSK || '';
                     document.getElementById('m_maNV').value = d.maNV || '';
                     
-                    document.getElementById('m_thoiGianBatDau').value = formatForInput(d.thoiGianBatDau);
-                    document.getElementById('m_thoiGianKetThuc').value = formatForInput(d.thoiGianKetThuc);
-                    document.getElementById('m_thoiGianMoBan').value = formatForInput(d.thoiGianMoBan);
-                    document.getElementById('m_thoiGianDongBan').value = formatForInput(d.thoiGianDongBan);
+                    document.getElementById('m_thoiGianBatDau').value = formatForDateTimeLocal(d.thoiGianBatDau);
+                    document.getElementById('m_thoiGianKetThuc').value = formatForDateTimeLocal(d.thoiGianKetThuc);
+                    document.getElementById('m_thoiGianMoBan').value = formatForDateTimeLocal(d.thoiGianMoBan);
+                    document.getElementById('m_thoiGianDongBan').value = formatForDateTimeLocal(d.thoiGianDongBan);
 
                     modal.classList.add('open');
                 })
@@ -610,5 +569,6 @@
             if (e.target === this) closeStageModal();
         });
     </script>
+</div>
 </body>
 </html>

@@ -16,6 +16,7 @@ public class BaoCaoSuKienDTO {
     private double tyLeChuyenDoi;
 
     public BaoCaoSuKienDTO() {
+        this.doanhThu = BigDecimal.ZERO;
     }
 
     public String getMaSK() {

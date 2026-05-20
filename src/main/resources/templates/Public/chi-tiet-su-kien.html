@@ -8,11 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <th:block layout:fragment="page-css">
         <style>
-            .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
+            .event-detail-container { max-width: 1000px; margin: 0 auto; }
             .event-header { display: flex; gap: 40px; background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid var(--dd-border); }
             .event-poster { width: 350px; border-radius: 12px; object-fit: cover; box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
             .event-details { flex: 1; display: flex; flex-direction: column; }
-            .event-title { font-size: 28px; color: #1e3a8a; margin: 0 0 15px; font-family: 'DM Serif Display', serif; }
+            .event-title { font-size: 28px; color: #1e3a8a; margin: 0 0 15px; font-family: "Be Vietnam Pro", "Inter", sans-serif; }
             .info-row { display: flex; align-items: center; gap: 15px; margin-bottom: 12px; color: #475569; font-size: 16px; }
             .info-row i { width: 24px; text-align: center; color: #3b82f6; font-size: 18px; }
             .zone-pricing { margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
@@ -28,7 +28,7 @@
 </head>
 <body>
     <main layout:fragment="content">
-        <div class="container">
+        <div class="event-detail-container">
             <div class="event-header animate__animated animate__fadeIn">
                 <img th:src="${suKien.hinhAnh != null ? suKien.hinhAnh : '/images/default-event.jpg'}" onerror="this.src='https://placehold.co/400x500/e2e8f0/64748b?text=Poster'" class="event-poster">
                 <div class="event-details">

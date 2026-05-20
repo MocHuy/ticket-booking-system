@@ -51,40 +51,6 @@ public class SessionService {
         try {
             return jdbcTemplate.queryForObject("SELECT MaNV FROM NHANVIEN WHERE MaND = ?", String.class, currentMaND);
         } catch (Exception e) {
-            try {
-                Set<String> roles = getCurrentRoles();
-                if (roles.contains("ADMIN") || roles.contains("STAFF") || roles.contains("ORGANIZER")) {
-                    String username = (String) request.getSession().getAttribute("tenTaiKhoan");
-                    if (username == null) {
-                        username = currentMaND;
-                    }
-                    String maNV = "NV-" + username.toUpperCase();
-                    
-                    Integer exists = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM NHANVIEN WHERE MaNV = ?", Integer.class, maNV);
-                    if (exists != null && exists > 0) {
-                        maNV = "NV-" + currentMaND.toUpperCase();
-                    }
-                    
-                    String loaiNV = "Quản lý";
-                    double luongCB = 15000000;
-                    double phuCap = 2000000;
-                    if (roles.contains("STAFF")) {
-                        loaiNV = "Nhân viên soát vé";
-                        luongCB = 8000000;
-                        phuCap = 500000;
-                    } else if (roles.contains("ORGANIZER")) {
-                        loaiNV = "Ban tổ chức";
-                        luongCB = 12000000;
-                        phuCap = 1000000;
-                    }
-                    
-                    jdbcTemplate.update("INSERT INTO NHANVIEN (MaNV, LoaiNV, NgayVaoLam, TrangThaiLamViec, LuongCoBan, PhuCap, MaND) VALUES (?, ?, SYSTIMESTAMP, 'Đang làm việc', ?, ?, ?)",
-                            maNV, loaiNV, luongCB, phuCap, currentMaND);
-                    return maNV;
-                }
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
             return null;
         }
     }

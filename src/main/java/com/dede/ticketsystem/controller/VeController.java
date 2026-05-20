@@ -86,6 +86,18 @@ public class VeController {
                     data.put("maDonHang", v.getMaDonHang());
                     data.put("maGhe", v.getMaGhe());
                     data.put("maSK", v.getMaSK());
+                    if (v.getMaGhe() != null && !v.getMaGhe().isBlank()) {
+                        try {
+                            List<Map<String, Object>> seats = jdbcTemplate.queryForList(
+                                    "SELECT MaKhuVuc as MAKHUVUC, TenGhe as TENGHE FROM GHENGOI WHERE MaGhe = ?",
+                                    v.getMaGhe());
+                            if (!seats.isEmpty()) {
+                                Map<String, Object> seat = seats.get(0);
+                                data.put("maKhuVuc", seat.get("MAKHUVUC"));
+                                data.put("tenGhe", seat.get("TENGHE"));
+                            }
+                        } catch (Exception ignored) {}
+                    }
                     return ResponseEntity.ok(data);
                 })
                 .orElse(ResponseEntity.notFound().build());

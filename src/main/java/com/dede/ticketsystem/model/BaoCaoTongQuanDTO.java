@@ -13,6 +13,8 @@ public class BaoCaoTongQuanDTO {
     private String suKienBanChayNhat;
 
     public BaoCaoTongQuanDTO() {
+        this.tongDoanhThu = BigDecimal.ZERO;
+        this.suKienBanChayNhat = "Chưa có";
     }
 
     public BigDecimal getTongDoanhThu() {

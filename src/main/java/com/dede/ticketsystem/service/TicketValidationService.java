@@ -42,36 +42,21 @@ public class TicketValidationService {
     public ValidationResult validateQr(String qrPayloadOrCode, String maSK, String maNV, String congSoat, String nguonDuLieu, Timestamp thoiGianQuetParam) {
         long startTime = System.currentTimeMillis();
         Timestamp thoiGianQuet = thoiGianQuetParam != null ? thoiGianQuetParam : new Timestamp(startTime);
+        String normalizedMaSK = normalize(maSK);
+        String normalizedCongSoat = normalize(congSoat) != null ? normalize(congSoat) : "Cổng chính";
+        String normalizedNguon = "Offline".equalsIgnoreCase(normalize(nguonDuLieu)) ? "Offline" : "Online";
 
-        // 1. Tìm vé theo payload hoặc code
-        Optional<Ve> veOpt = veService.parsePayloadAndFindVe(qrPayloadOrCode);
+        // Tìm và khóa vé ngay từ bước lookup để chống hai request cùng hợp lệ.
+        Optional<Ve> veOpt = veService.parsePayloadAndFindVeWithLock(qrPayloadOrCode);
 
         if (veOpt.isEmpty()) {
-            // Không tìm thấy vé
             String status = "Vé không tìm thấy";
-            
-            LichSuSoatVe l = new LichSuSoatVe();
-            l.setMaLichSu("LS-" + UUID.randomUUID().toString().substring(0, 8) + "-" + System.currentTimeMillis());
-            l.setThoiGianQuet(thoiGianQuet);
-            l.setKetQuaQuet(status);
-            l.setCongSoat(congSoat);
-            l.setNguonDuLieu(nguonDuLieu);
-            l.setDaDongBo("Y");
-            l.setThoiGianDongBo(new Timestamp(System.currentTimeMillis()));
-            l.setMaVe(null);
-            l.setMaNV(maNV);
-
-            lichSuSoatVeRepository.save(l);
-
+            saveScanHistory(status, normalizedCongSoat, normalizedNguon, thoiGianQuet, null, maNV);
             long duration = System.currentTimeMillis() - startTime;
             return new ValidationResult(false, status, null, null, null, null, duration);
         }
 
-        Ve ve = veOpt.get();
-
-        // 2. Khóa dòng dữ liệu của Vé bằng PESSIMISTIC_WRITE để tránh race condition
-        Optional<Ve> lockedVeOpt = veRepository.findByMaVeWithLock(ve.getMaVe());
-        Ve lockedVe = lockedVeOpt.orElse(ve);
+        Ve lockedVe = veOpt.get();
 
         // 3. Lấy thông tin chi tiết (ghế, khu vực, người mua)
         String seatName = null;
@@ -103,28 +88,28 @@ public class TicketValidationService {
         String status;
         boolean success = false;
 
-        if (lockedVe.getMaSK() == null || !lockedVe.getMaSK().equals(maSK)) {
-            // Sai sự kiện
+        if (lockedVe.getMaSK() == null || !lockedVe.getMaSK().equals(normalizedMaSK)) {
             status = "Sai sự kiện";
         } else if ("Đã sử dụng".equals(lockedVe.getTrangThaiVe())) {
-            // Vé đã được sử dụng
             status = "Vé đã sử dụng";
         } else if ("Đã hủy".equals(lockedVe.getTrangThaiVe())) {
-            // Vé đã hủy được coi là "Vé giả" do ràng buộc check constraint CHK_LSSV_KetQua
             status = "Vé giả";
         } else {
-            // Vé hợp lệ
             status = "Hợp lệ";
             success = true;
 
-            // Cập nhật trạng thái vé và thời gian sử dụng
             lockedVe.setTrangThaiVe("Đã sử dụng");
-            // Offline sync thì dùng thời gian quét làm thời gian sử dụng thực tế
             lockedVe.setThoiGianSuDung(thoiGianQuet);
             veRepository.save(lockedVe);
         }
 
-        // 5. Ghi lịch sử soát vé
+        saveScanHistory(status, normalizedCongSoat, normalizedNguon, thoiGianQuet, lockedVe.getMaVe(), maNV);
+
+        long duration = System.currentTimeMillis() - startTime;
+        return new ValidationResult(success, status, lockedVe.getMaVe(), seatName, zoneName, ticketOwner, duration);
+    }
+
+    private void saveScanHistory(String status, String congSoat, String nguonDuLieu, Timestamp thoiGianQuet, String maVe, String maNV) {
         LichSuSoatVe l = new LichSuSoatVe();
         l.setMaLichSu("LS-" + UUID.randomUUID().toString().substring(0, 8) + "-" + System.currentTimeMillis());
         l.setThoiGianQuet(thoiGianQuet);
@@ -133,13 +118,18 @@ public class TicketValidationService {
         l.setNguonDuLieu(nguonDuLieu);
         l.setDaDongBo("Y");
         l.setThoiGianDongBo(new Timestamp(System.currentTimeMillis()));
-        l.setMaVe(lockedVe.getMaVe());
+        l.setMaVe(maVe);
         l.setMaNV(maNV);
 
         lichSuSoatVeRepository.save(l);
+    }
 
-        long duration = System.currentTimeMillis() - startTime;
-        return new ValidationResult(success, status, lockedVe.getMaVe(), seatName, zoneName, ticketOwner, duration);
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String clean = value.trim();
+        return clean.isEmpty() ? null : clean;
     }
 
     @Transactional

@@ -9,17 +9,17 @@
     <!-- CSS riêng cho trang Soát Vé (Glassmorphism & Rich Aesthetics) -->
     <th:block layout:fragment="page-css">
         <style>
-            body {
+            .soat-ve-page {
                 background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%) !important;
                 color: #f1f5f9;
                 min-height: 100vh;
-                font-family: 'DM Sans', sans-serif;
+                font-family: "Be Vietnam Pro", "Inter", "Noto Sans", system-ui, sans-serif;
             }
 
             .main-container {
-                max-width: 1200px;
+                max-width: 1320px;
                 margin: 0 auto;
-                padding: 20px;
+                padding: 0;
             }
 
             .glass-card {
@@ -295,7 +295,7 @@
 </head>
 <body>
 
-<main layout:fragment="content" class="py-4">
+<main layout:fragment="content" class="soat-ve-page py-4">
     <div class="main-container">
         
         <!-- Header & Live Network Status -->
@@ -340,7 +340,7 @@
                             <div class="col-md-6">
                                 <label for="maSK" class="form-label text-muted fw-semibold small">Sự Kiện Đang Diễn Ra</label>
                                 <select class="form-select bg-slate-900 text-white border-secondary" id="maSK" name="maSK" style="background-color: #0f172a; border-color: rgba(255,255,255,0.1) !important; color: white;">
-                                    <option th:each="sk : ${suKienList}" th:value="${sk.maSK}" th:text="${sk.tenSK}">Sự kiện demo</option>
+                                    <option th:each="sk : ${suKienList}" th:value="${sk.maSK}" th:text="${sk.maSK + ' - ' + sk.tenSK}">SK001 - Sự kiện demo</option>
                                     <option th:if="${suKienList == null or suKienList.isEmpty()}" value="">Không tìm thấy sự kiện nào</option>
                                 </select>
                             </div>
@@ -413,7 +413,7 @@
                         <form id="manualScanForm" onsubmit="processManualScan(event);">
                             <div class="input-group">
                                 <input type="text" class="form-control text-white" id="manualQrInput" placeholder="Ví dụ: TICKET|maVe=VE-123|maQR=..." required style="background-color: #0f172a; border-color: rgba(255,255,255,0.1) !important; color: white;">
-                                <button type="submit" class="btn btn-indigo px-4" style="background-color: #6366f1; border-color: #6366f1; color: white;">
+                                <button type="submit" class="btn btn-indigo px-4" th:disabled="${maNV == null or suKienList == null or suKienList.isEmpty()}" style="background-color: #6366f1; border-color: #6366f1; color: white;">
                                     <i class="bi bi-check-circle me-1"></i> Kiểm Tra
                                 </button>
                             </div>
@@ -474,8 +474,14 @@
         window.addEventListener('online', handleConnectivityChange);
         window.addEventListener('offline', handleConnectivityChange);
 
-        document.getElementById('btnToggleCamera').addEventListener('click', toggleCameraScanner);
-        document.getElementById('btnManualSync').addEventListener('click', manualBatchSync);
+        const btnToggleCamera = document.getElementById('btnToggleCamera');
+        const btnManualSync = document.getElementById('btnManualSync');
+        if (btnToggleCamera) {
+            btnToggleCamera.addEventListener('click', toggleCameraScanner);
+        }
+        if (btnManualSync) {
+            btnManualSync.addEventListener('click', manualBatchSync);
+        }
 
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
@@ -483,6 +489,27 @@
             loadScanHistoryFromServer();
             checkAndSyncPendingOfflineScans();
         });
+
+        function getPendingScans() {
+            try {
+                const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                console.warn('Hàng đợi offline trong localStorage không hợp lệ, đã bỏ qua.', e);
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                return [];
+            }
+        }
+
+        function setPendingScans(scans) {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(Array.isArray(scans) ? scans : []));
+            } catch (e) {
+                console.warn('Không thể ghi localStorage cho hàng đợi offline.', e);
+            }
+        }
 
         // 1. Connectivity Status Management
         function handleConnectivityChange() {
@@ -626,9 +653,9 @@
             };
 
             // Save in LocalStorage
-            let pending = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            let pending = getPendingScans();
             pending.push(record);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(pending));
+            setPendingScans(pending);
 
             // Update manual sync button
             updateOfflineSyncButton();
@@ -661,7 +688,7 @@
         }
 
         function updateOfflineSyncButton() {
-            const pending = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            const pending = getPendingScans();
             const syncBtn = document.getElementById('btnManualSync');
             const syncPill = document.getElementById('syncPill');
 
@@ -674,7 +701,7 @@
         }
 
         function renderOfflineScansIntoHistoryTable() {
-            const pending = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            const pending = getPendingScans();
             if (pending.length === 0) return;
 
             // Fetch current online history from UI table if any
@@ -709,7 +736,7 @@
 
         // 5. Automatic & Manual Synchronization when connection returns
         function checkAndSyncPendingOfflineScans() {
-            const pending = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
+            const pending = getPendingScans();
             if (pending.length === 0) {
                 updateOfflineSyncButton();
                 return;
@@ -770,6 +797,15 @@
             // Show validation roundtrip duration
             speedContainer.style.display = 'block';
             speedVal.textContent = roundtripMs;
+
+            if (!res || !res.status) {
+                banner.classList.add('res-state-not-found');
+                icon.innerHTML = '<i class="bi bi-x-circle-fill"></i>';
+                title.textContent = 'KHÔNG THỂ KIỂM TRA';
+                desc.textContent = (res && res.message) ? res.message : 'Hệ thống chưa trả về kết quả hợp lệ.';
+                metaContainer.style.display = 'none';
+                return;
+            }
 
             if (res.status === 'Hợp lệ') {
                 banner.classList.add('res-state-success');
@@ -859,7 +895,7 @@
 
             if (isCameraActive) {
                 // Stop camera
-                if (html5QrcodeScanner) {
+                if (html5QrcodeScanner && typeof html5QrcodeScanner.clear === 'function') {
                     html5QrcodeScanner.clear().then(() => {
                         scannerBox.style.display = 'none';
                         btnToggle.className = 'camera-toggle-btn';
@@ -867,27 +903,62 @@
                         isCameraActive = false;
                     }).catch(err => {
                         console.error("Failed to clear camera scanner: ", err);
+                        scannerBox.style.display = 'none';
+                        btnToggle.className = 'camera-toggle-btn';
+                        btnToggle.innerHTML = '<i class="bi bi-camera-video-fill me-1"></i> Mở Camera';
+                        isCameraActive = false;
                     });
                 }
             } else {
+                if (typeof Html5QrcodeScanner === 'undefined') {
+                    scannerBox.style.display = 'none';
+                    showCameraUnavailable('Không tải được thư viện quét QR hoặc trình duyệt đang chặn camera. Bạn vẫn có thể nhập mã thủ công.');
+                    return;
+                }
+
                 // Start camera
                 scannerBox.style.display = 'block';
                 btnToggle.className = 'camera-toggle-btn btn-danger';
                 btnToggle.innerHTML = '<i class="bi bi-camera-video-off-fill me-1"></i> Đóng Camera';
                 isCameraActive = true;
 
-                html5QrcodeScanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 15, 
-                        qrbox: { width: 250, height: 250 },
-                        rememberLastUsedCamera: true
-                    },
-                    /* verbose= */ false
-                );
+                try {
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader",
+                        {
+                            fps: 15,
+                            qrbox: { width: 250, height: 250 },
+                            rememberLastUsedCamera: true
+                        },
+                        /* verbose= */ false
+                    );
 
-                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                } catch (err) {
+                    console.warn('Không thể khởi động camera quét QR:', err);
+                    scannerBox.style.display = 'none';
+                    btnToggle.className = 'camera-toggle-btn';
+                    btnToggle.innerHTML = '<i class="bi bi-camera-video-fill me-1"></i> Mở Camera';
+                    isCameraActive = false;
+                    showCameraUnavailable('Không thể mở camera trên thiết bị này. Vui lòng nhập mã vé thủ công.');
+                }
             }
+        }
+
+        function showCameraUnavailable(message) {
+            const banner = document.getElementById('resultBanner');
+            const icon = document.getElementById('resultIcon');
+            const title = document.getElementById('resultTitle');
+            const desc = document.getElementById('resultDesc');
+            const metaContainer = document.getElementById('resultMeta');
+            const speedContainer = document.getElementById('resultSpeed');
+
+            banner.className = 'result-banner res-state-already-used';
+            icon.innerHTML = '<i class="bi bi-camera-video-off-fill"></i>';
+            title.textContent = 'CAMERA KHÔNG SẴN SÀNG';
+            desc.textContent = message;
+            metaContainer.style.display = 'none';
+            speedContainer.style.display = 'none';
         }
 
         function onScanSuccess(decodedText, decodedResult) {

@@ -16,14 +16,14 @@
             --gradient-5: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
         }
 
-        body {
+        .dashboard-page {
             background-color: #f1f5f9;
         }
 
         .dashboard-container {
-            max-width: 1400px;
+            max-width: 1320px;
             margin: 0 auto;
-            padding: 2rem 1rem;
+            padding: 0;
         }
 
         .stat-card {
@@ -197,15 +197,27 @@
             letter-spacing: -0.5px;
             color: #0f172a;
         }
+
+        .chart-empty-state {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #64748b;
+            font-weight: 600;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <main layout:fragment="content">
+    <main layout:fragment="content" class="dashboard-page">
         <div class="dashboard-container">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h1 class="fw-bold text-dark mb-1" style="font-family: 'DM Serif Display', serif; font-size: 32px;">Báo cáo &amp; Dashboard hành vi</h1>
+                    <h1 class="fw-bold text-dark mb-1" style="font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-size: 32px;">Báo cáo &amp; Dashboard hành vi</h1>
                     <p class="text-muted mb-0" style="font-size: 14px;">Phân tích thống kê doanh thu bán vé và đo lường hành vi tương tác của khách hàng.</p>
                 </div>
                 <div class="d-flex gap-2">
@@ -216,10 +228,15 @@
                 </div>
             </div>
 
+            <div th:if="${errorMessage != null}" class="alert alert-warning border-0 shadow-sm rounded-3 mb-4">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <span th:text="${errorMessage}">Không thể tải dữ liệu báo cáo.</span>
+            </div>
+
             <!-- Bộ lọc -->
             <div class="filter-card">
                 <h5 class="fw-bold mb-3" style="font-size: 16px;"><i class="bi bi-funnel me-2 text-primary"></i>Bộ lọc báo cáo</h5>
-                <form method="get" action="/baocao" class="row g-3">
+                <form method="get" th:action="@{/baocao}" class="row g-3">
                     <div class="col-md-3">
                         <label for="maSK" class="form-label text-muted small fw-semibold">Sự kiện</label>
                         <select name="maSK" id="maSK" class="form-select rounded-3">
@@ -249,7 +266,7 @@
                         </select>
                     </div>
                     <div class="col-12 d-flex justify-content-end gap-2 mt-4">
-                        <a href="/baocao" class="btn btn-filter-reset px-4 py-2 rounded-3"><i class="bi bi-x-circle me-2"></i>Xóa bộ lọc</a>
+                        <a th:href="@{/baocao}" class="btn btn-filter-reset px-4 py-2 rounded-3"><i class="bi bi-x-circle me-2"></i>Xóa bộ lọc</a>
                         <button type="submit" class="btn btn-filter-apply px-4 py-2 rounded-3"><i class="bi bi-funnel-fill me-2"></i>Lọc dữ liệu</button>
                     </div>
                 </form>
@@ -345,6 +362,7 @@
                         <h5 class="fw-bold mb-3 text-dark" style="font-size: 16px;"><i class="bi bi-bar-chart-line me-2 text-indigo"></i>Doanh thu theo sự kiện</h5>
                         <div style="position: relative; height: 320px;">
                             <canvas id="revenueChart"></canvas>
+                            <div id="revenueChartEmpty" class="chart-empty-state" style="display: none;">Chưa có dữ liệu doanh thu</div>
                         </div>
                     </div>
                 </div>
@@ -353,6 +371,7 @@
                         <h5 class="fw-bold mb-3 text-dark" style="font-size: 16px;"><i class="bi bi-pie-chart me-2 text-info"></i>Tỷ lệ vé bán của các sự kiện</h5>
                         <div style="position: relative; height: 320px;">
                             <canvas id="ticketsChart"></canvas>
+                            <div id="ticketsChartEmpty" class="chart-empty-state" style="display: none;">Chưa có dữ liệu vé bán</div>
                         </div>
                     </div>
                 </div>
@@ -362,7 +381,7 @@
             <div class="card table-card mb-4">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="fw-bold mb-0 text-dark" style="font-size: 16px;"><i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>Thống kê chi tiết theo sự kiện</h5>
-                    <span class="badge bg-light text-muted border px-2 py-1 rounded" style="font-size: 12px;" th:text="${baoCaoSuKienList.size() + ' sự kiện'}">0 sự kiện</span>
+                    <span class="badge bg-light text-muted border px-2 py-1 rounded" style="font-size: 12px;" th:text="${baoCaoSuKienList != null ? baoCaoSuKienList.size() + ' sự kiện' : '0 sự kiện'}">0 sự kiện</span>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover table-dd align-middle mb-0">
@@ -398,7 +417,7 @@
                                 <td class="text-end text-dark">
                                     <span th:text="${#numbers.formatDecimal(row.tyLeLapDay, 1, 2) + '%'}">0.00%</span>
                                     <div class="progress mt-1" style="height: 4px;">
-                                        <div class="progress-bar bg-success" role="progressbar" th:style="'width: ' + ${row.tyLeLapDay} + '%'"></div>
+                                        <div class="progress-bar bg-success" role="progressbar" th:style="'width: ' + ${T(java.lang.Math).min(row.tyLeLapDay, 100.0)} + '%'"></div>
                                     </div>
                                 </td>
                                 <td class="text-end" th:text="${#numbers.formatDecimal(row.luotXem, 0, 'POINT', 0, 'COMMA')}">0</td>
@@ -432,13 +451,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:if="${recentHanhViList == null or recentHanhViList.isEmpty()}">
+                            <tr th:if="${hanhViList == null or hanhViList.isEmpty()}">
                                 <td colspan="6" class="text-center py-5 text-muted">
                                     <i class="bi bi-activity fs-3 mb-2 d-block"></i>
                                     Chưa ghi nhận hoạt động tương tác nào của người dùng.
                                 </td>
                             </tr>
-                            <tr th:each="log : ${recentHanhViList}">
+                            <tr th:each="log : ${hanhViList}">
                                 <td class="text-muted" th:text="${log.thoiGian != null ? #dates.format(log.thoiGian, 'dd/MM/yyyy HH:mm:ss') : '-'}">--/--/---- --:--:--</td>
                                 <td class="fw-medium text-dark">
                                     <i class="bi bi-person-circle me-1 text-secondary"></i>
@@ -476,15 +495,16 @@
             const now = new Date();
             document.getElementById('currentDateTime').innerText = now.toLocaleDateString('vi-VN') + ' ' + now.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
 
-            // Safe parsing of Thymeleaf data list
+            // Safe JSON arrays from controller
             /*<![CDATA[*/
-            const eventReports = /*[[${baoCaoSuKienList}]]*/ [];
+            const rawLabels = /*[[${chartLabels}]]*/ [];
+            const rawRevenueData = /*[[${chartRevenueData}]]*/ [];
+            const rawSoldTicketsData = /*[[${chartSoldTicketsData}]]*/ [];
             /*]]>*/
 
-            // Map data for charts
-            const labels = [];
-            const revenueData = [];
-            const soldTicketsData = [];
+            const labels = Array.isArray(rawLabels) ? rawLabels : [];
+            const revenueData = Array.isArray(rawRevenueData) ? rawRevenueData.map(v => Number(v || 0)) : [];
+            const soldTicketsData = Array.isArray(rawSoldTicketsData) ? rawSoldTicketsData.map(v => Number(v || 0)) : [];
             const colors = [];
 
             // Modern color palette
@@ -493,16 +513,25 @@
                 '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#64748b'
             ];
 
-            if (Array.isArray(eventReports) && eventReports.length > 0) {
-                eventReports.forEach((item, index) => {
-                    labels.push(item.tenSK || item.maSK);
-                    revenueData.push(item.doanhThu || 0);
-                    soldTicketsData.push(item.soVeDaBan || 0);
-                    colors.push(palette[index % palette.length]);
-                });
+            const hasRealEventData = labels.length > 0;
+            if (!hasRealEventData) {
+                labels.push('Chưa có dữ liệu');
+                revenueData.push(0);
+                soldTicketsData.push(0);
             }
 
-            // Draw charts only if Chart.js is loaded successfully
+            labels.forEach((_, index) => colors.push(palette[index % palette.length]));
+
+            function setChartEmptyState(elementId, visible) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.style.display = visible ? 'flex' : 'none';
+                }
+            }
+
+            setChartEmptyState('revenueChartEmpty', !hasRealEventData || revenueData.every(v => v === 0));
+            setChartEmptyState('ticketsChartEmpty', !hasRealEventData || soldTicketsData.every(v => v === 0));
+
             if (typeof Chart !== 'undefined') {
                 try {
                     // 1. Revenue Chart (Bar)
@@ -552,7 +581,7 @@
                                         maxRotation: 15,
                                         minRotation: 0,
                                         callback: function(value, index) {
-                                            const label = labels[index];
+                                            const label = String(labels[index] || '');
                                             return label.length > 15 ? label.substring(0, 15) + '...' : label;
                                         }
                                     }
@@ -611,6 +640,8 @@
                 }
             } else {
                 console.warn("Chart.js CDN không thể tải hoặc bị chặn.");
+                setChartEmptyState('revenueChartEmpty', true);
+                setChartEmptyState('ticketsChartEmpty', true);
             }
         </script>
     </th:block>

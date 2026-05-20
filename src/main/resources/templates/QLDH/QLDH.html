@@ -1,78 +1,20 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Đơn Hàng - Dề Dê Tickets</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" th:href="@{/css/pages/QLDH.css}">
+    <th:block layout:fragment="page-css">
+        <link rel="stylesheet" th:href="@{/css/pages/QLDH.css}">
+    </th:block>
 </head>
 
 <body>
-    <div class="layout-wrapper">
-
-        <!-- ===================== SIDEBAR ===================== -->
-        <aside class="sidebar">
-            <div class="sidebar-brand">
-                <div class="brand-icon"><i class="fa-solid fa-ticket"></i></div>
-                <span class="brand-name">Dề Dê Tickets</span>
-            </div>
-
-            <nav class="sidebar-nav">
-                <ul>
-                    <li><span class="nav-label">Quản lý hệ thống</span></li>
-                    <li>
-                        <a href="/taikhoan">
-                            <i class="fa-solid fa-users"></i>
-                            <span>Quản lý Tài khoản</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/sukien">
-                            <i class="fa-solid fa-calendar-days"></i>
-                            <span>Quản lý Sự kiện</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/donhang" class="active">
-                            <i class="fa-solid fa-receipt"></i>
-                            <span>Quản lý Đơn hàng</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/ve">
-                            <i class="fa-solid fa-ticket-simple"></i>
-                            <span>Quản lý Vé</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-qrcode"></i>
-                            <span>Soát vé</span>
-                        </a>
-                    </li>
-                    <li><span class="nav-label">Phân tích</span></li>
-                    <li>
-                        <a href="#">
-                            <i class="fa-solid fa-chart-line"></i>
-                            <span>Báo cáo & Thống kê</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="sidebar-footer">
-                <form action="/dang-xuat" method="post">
-                    <button type="submit" class="btn-logout">
-                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
-                        <span>Đăng xuất</span>
-                    </button>
-                </form>
-            </div>
-        </aside>
-
-        <!-- ===================== MAIN CONTENT ===================== -->
+<div layout:fragment="content" class="admin-page">
+<!-- ===================== MAIN CONTENT ===================== -->
         <main class="main-content">
 
             <!-- Header -->
@@ -214,8 +156,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
     <!-- ===================== MODAL CHI TIẾT ===================== -->
     <div id="detailModal" class="modal-overlay">
         <div class="modal-box">
@@ -398,6 +338,7 @@
             if (e.target === this) closeModal();
         });
     </script>
+</div>
 </body>
 
 </html>

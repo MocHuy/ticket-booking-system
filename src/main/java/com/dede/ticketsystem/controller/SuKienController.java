@@ -119,6 +119,19 @@ public class SuKienController {
 
     @PostMapping("/cap-nhat/{maSK}")
     public String capNhat(@PathVariable String maSK, @ModelAttribute SuKienDTO dto, RedirectAttributes redirectAttributes) {
+        return xuLyCapNhat(maSK, dto, redirectAttributes);
+    }
+
+    @PostMapping("/update")
+    public String capNhatTuForm(@ModelAttribute SuKienDTO dto, RedirectAttributes redirectAttributes) {
+        if (dto.getMaSK() == null || dto.getMaSK().isBlank()) {
+            redirectAttributes.addFlashAttribute("loi", "Lỗi cập nhật: Không xác định được mã sự kiện.");
+            return "redirect:/sukien";
+        }
+        return xuLyCapNhat(dto.getMaSK().trim(), dto, redirectAttributes);
+    }
+
+    private String xuLyCapNhat(String maSK, SuKienDTO dto, RedirectAttributes redirectAttributes) {
         try {
             suKienService.capNhatSuKien(maSK, dto);
             redirectAttributes.addFlashAttribute("thanhCong", "Cập nhật sự kiện " + maSK + " thành công!");
