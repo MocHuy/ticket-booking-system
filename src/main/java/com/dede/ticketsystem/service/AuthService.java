@@ -30,4 +30,22 @@ public class AuthService {
 
         return nguoiDung;
     }
+
+    public void dangKy(String tenTaiKhoan, String email, String sdt, String matKhau) {
+        if (nguoiDungRepository.findByTenTaiKhoan(tenTaiKhoan).isPresent()) {
+            throw new RuntimeException("Tên đăng nhập đã tồn tại.");
+        }
+        
+        NguoiDung newUser = NguoiDung.builder()
+                .maND("ND" + System.currentTimeMillis())
+                .tenTaiKhoan(tenTaiKhoan)
+                .email(email)
+                .sdt(sdt)
+                .matKhauMaHoa(passwordEncoder.encode(matKhau))
+                .trangThaiND("Đang hoạt động")
+                .thoiGianTao(new java.sql.Timestamp(System.currentTimeMillis()))
+                .build();
+        
+        nguoiDungRepository.save(newUser);
+    }
 }

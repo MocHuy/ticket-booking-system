@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Sự Kiện - Dề Dê Tickets</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/pages/QLSK.css}">
+</head>
+
+<body>
+    <div class="layout-wrapper">
+
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-ticket"></i></div>
+                <span class="brand-name">Dề Dê Tickets</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li><span class="nav-label">Quản lý hệ thống</span></li>
+                    <li>
+                        <a href="/taikhoan">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Quản lý Tài khoản</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/sukien" class="active">
+                            <i class="fa-solid fa-calendar-days"></i>
+                            <span>Quản lý Sự kiện</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/donhang">
+                            <i class="fa-solid fa-receipt"></i>
+                            <span>Quản lý Đơn hàng</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/ve">
+                            <i class="fa-solid fa-ticket-simple"></i>
+                            <span>Quản lý Vé</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <i class="fa-solid fa-qrcode"></i>
+                            <span>Soát vé</span>
+                        </a>
+                    </li>
+                    <li><span class="nav-label">Phân tích</span></li>
+                    <li>
+                        <a href="#">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Báo cáo & Thống kê</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <form action="/dang-xuat" method="post">
+                    <button type="submit" class="btn-logout">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>Đăng xuất</span>
+                    </button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- ===================== MAIN CONTENT ===================== -->
+        <main class="main-content">
+
+            <!-- Header -->
+            <header class="main-header">
+                <h2><i class="fa-solid fa-calendar-days" style="margin-right:10px;color:#3b82f6;"></i>Quản Lý Sự Kiện</h2>
+                <div class="header-right">
+                    <i class="fa-solid fa-bell" title="Thông báo"></i>
+                    <span>Hôm nay: <b id="currentDate"></b></span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <!-- Thống báo (Alert) -->
+                <div th:if="${thanhCong}" class="alert-box alert-success" style="display:block;">
+                    <i class="fa-solid fa-circle-check" style="margin-right:8px;"></i>
+                    <span th:text="${thanhCong}"></span>
+                </div>
+                <div th:if="${loi}" class="alert-box alert-error" style="display:block;">
+                    <i class="fa-solid fa-circle-xmark" style="margin-right:8px;"></i>
+                    <span th:text="${loi}"></span>
+                </div>
+
+                <!-- Toolbar: Search & Filter -->
+                <div class="toolbar">
+                    <div class="toolbar-left">
+                        <div class="search-wrapper">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="searchInput" placeholder="Tên sự kiện, Mã sự kiện...">
+                        </div>
+                        <select id="statusFilter" class="filter-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="Chưa mở bán">Chưa mở bán</option>
+                            <option value="Đang mở bán">Đang mở bán</option>
+                            <option value="Đã kết thúc">Đã kết thúc</option>
+                            <option value="Đã hủy">Đã hủy</option>
+                            <option value="Tạm ngưng">Tạm ngưng</option>
+                        </select>
+                        <button class="btn-filter" onclick="filterTable()">
+                            <i class="fa-solid fa-filter"></i> Lọc
+                        </button>
+                    </div>
+                    <div class="toolbar-right">
+                        <button class="btn-add" onclick="moModalThem()">
+                            <i class="fa-solid fa-plus"></i> Thêm Sự Kiện
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-card">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã SK</th>
+                                    <th>Tên Sự Kiện</th>
+                                    <th>Bắt Đầu</th>
+                                    <th>Kết Thúc</th>
+                                    <th>Tổng Vé</th>
+                                    <th>Đã Bán</th>
+                                    <th style="text-align:center;">Trạng Thái</th>
+                                    <th style="text-align:center;">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="eventTableBody">
+                                <!-- Empty state -->
+                                <tr th:if="${suKienList == null or suKienList.isEmpty()}">
+                                    <td colspan="8" style="text-align:center;padding:30px;color:#93c5fd;">
+                                        <i class="fa-solid fa-calendar-xmark"
+                                            style="font-size:28px;margin-bottom:8px;display:block;"></i>
+                                        Chưa có sự kiện nào.
+                                    </td>
+                                </tr>
+                                <!-- Data rows -->
+                                <tr th:each="sk : ${suKienList}" th:attr="data-ma=${sk.maSK}"
+                                    onclick="moModalSua(this.getAttribute('data-ma'))">
+                                    <td><b th:text="${sk.maSK}">SK-001</b></td>
+                                    <td th:text="${sk.tenSK != null ? sk.tenSK : '-'}">-</td>
+                                    <td th:text="${sk.thoiGianBatDau != null ? #dates.format(sk.thoiGianBatDau, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                                    <td th:text="${sk.thoiGianKetThuc != null ? #dates.format(sk.thoiGianKetThuc, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                                    <td th:text="${sk.tongSoVe != null ? sk.tongSoVe : '0'}">0</td>
+                                    <td th:text="${sk.soVeDaBan != null ? sk.soVeDaBan : '0'}">0</td>
+                                    <td style="text-align:center;">
+                                        <span th:if="${sk.trangThaiSK == 'Chưa mở bán'}" class="badge badge-primary">Chưa mở bán</span>
+                                        <span th:if="${sk.trangThaiSK == 'Đang mở bán'}" class="badge badge-success">Đang mở bán</span>
+                                        <span th:if="${sk.trangThaiSK == 'Đã kết thúc'}" class="badge badge-secondary">Đã kết thúc</span>
+                                        <span th:if="${sk.trangThaiSK == 'Đã hủy'}" class="badge badge-danger">Đã hủy</span>
+                                        <span th:if="${sk.trangThaiSK == 'Tạm ngưng'}" class="badge badge-warning">Tạm ngưng</span>
+                                        <span th:if="${sk.trangThaiSK != 'Chưa mở bán' and sk.trangThaiSK != 'Đang mở bán' and sk.trangThaiSK != 'Đã kết thúc' and sk.trangThaiSK != 'Đã hủy' and sk.trangThaiSK != 'Tạm ngưng'}"
+                                              class="badge badge-secondary" th:text="${sk.trangThaiSK}">?</span>
+                                    </td>
+                                    <td style="text-align:center;" onclick="event.stopPropagation()">
+                                        <button class="btn-action btn-stage"
+                                            th:attr="onclick='moModalSanKhau(\'' + ${sk.maSK} + '\')'"
+                                            title="Thiết lập sân khấu">
+                                            <i class="fa-solid fa-layer-group"></i>
+                                        </button>
+                                        <button class="btn-action btn-edit"
+                                            th:attr="onclick='moModalSua(\'' + ${sk.maSK} + '\')'"
+                                            title="Sửa sự kiện">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </button>
+                                        <button class="btn-action btn-delete"
+                                            th:disabled="${sk.trangThaiSK == 'Đã hủy'}"
+                                            th:attr="onclick='huySuKien(\'' + ${sk.maSK} + '\')'" title="Hủy sự kiện">
+                                            <i class="fa-solid fa-ban"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-bar">
+                        <span>Hiển thị <b th:text="${suKienList != null ? suKienList.size() : 0}">0</b> sự kiện</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===================== MODAL THÊM / SỬA ===================== -->
+    <div id="eventModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modalTitle"><i class="fa-solid fa-calendar-plus" style="margin-right:8px;color:#3b82f6;"></i>Thêm Sự Kiện</h3>
+                <button class="btn-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="eventForm" method="post" action="/sukien/tao-moi">
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group" style="grid-column: 1 / -1; display: none;">
+                            <label>Mã Sự Kiện</label>
+                            <input type="hidden" id="m_maSK" name="maSK">
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Tên Sự Kiện <span style="color:red">*</span></label>
+                            <input type="text" id="m_tenSK" name="tenSK" required class="form-control">
+                        </div>
+                        
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Mô tả ngắn</label>
+                            <input type="text" id="m_moTaNgan" name="moTaNgan" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Bắt Đầu</label>
+                            <input type="datetime-local" id="m_thoiGianBatDau" name="thoiGianBatDau" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Kết Thúc</label>
+                            <input type="datetime-local" id="m_thoiGianKetThuc" name="thoiGianKetThuc" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Mở Bán Vé</label>
+                            <input type="datetime-local" id="m_thoiGianMoBan" name="thoiGianMoBan" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Đóng Bán Vé</label>
+                            <input type="datetime-local" id="m_thoiGianDongBan" name="thoiGianDongBan" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Tổng Số Vé</label>
+                            <input type="number" id="m_tongSoVe" name="tongSoVe" value="0" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Trạng Thái</label>
+                            <select id="m_trangThaiSK" name="trangThaiSK" class="form-control">
+                                <option value="Chưa mở bán">Chưa mở bán</option>
+                                <option value="Đang mở bán">Đang mở bán</option>
+                                <option value="Đã kết thúc">Đã kết thúc</option>
+                                <option value="Đã hủy">Đã hủy</option>
+                                <option value="Tạm ngưng">Tạm ngưng</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Link Hình Ảnh</label>
+                            <input type="text" id="m_hinhAnh" name="hinhAnh" placeholder="https://..." class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Nhân Viên Phụ Trách</label>
+                            <select id="m_maNV" name="maNV" class="form-control">
+                                <option value="">-- Chọn nhân viên --</option>
+                                <option th:each="nv : ${dsNhanVien}" th:value="${nv.MANV}" th:text="${nv.TENNV} + ' (' + ${nv.MANV} + ')'"></option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Địa Điểm</label>
+                            <select id="m_maDiaDiem" name="maDiaDiem" class="form-control">
+                                <option value="">-- Chọn địa điểm --</option>
+                                <option th:each="dd : ${dsDiaDiem}" th:value="${dd.MADIADIEM}" th:text="${dd.TENDIADIEM}"></option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label>Loại Sự Kiện</label>
+                            <select id="m_maLoaiSK" name="maLoaiSK" class="form-control">
+                                <option value="">-- Chọn loại sự kiện --</option>
+                                <option th:each="lsk : ${dsLoaiSK}" th:value="${lsk.MALOAISK}" th:text="${lsk.TENLOAISK}"></option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-close-modal" onclick="closeModal()">Đóng</button>
+                    <button type="submit" class="btn-save" id="btnSave">Lưu thay đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL THIẾT LẬP SÂN KHẤU ===================== -->
+    <div id="stageModal" class="modal-overlay">
+        <div class="modal-box" style="max-width: 900px; width: 90%;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-layer-group" style="margin-right:8px;color:#8b5cf6;"></i>Thiết Lập Sân Khấu</h3>
+                <button class="btn-close" onclick="closeStageModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="s_maSK">
+                
+                <div style="display:flex; gap: 20px; align-items: stretch;">
+                    <!-- Cột trái: Cấu hình Khu vực -->
+                    <div style="flex: 1;">
+                        <h4 style="margin-bottom: 10px; font-size: 15px;">Danh Sách Khu Vực</h4>
+                        <div id="zoneList" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px; padding-right: 5px;">
+                            <!-- Danh sách zone thêm bằng JS -->
+                        </div>
+                        <button type="button" class="btn-add" onclick="addZoneForm()" style="width: 100%; margin-bottom: 20px; padding: 10px;">
+                            <i class="fa-solid fa-plus"></i> Thêm Khu Vực Mới
+                        </button>
+                    </div>
+
+                    <!-- Cột phải: Xem trước Sơ đồ -->
+                    <div style="flex: 1; border-left: 1px solid #e2e8f0; padding-left: 20px;">
+                        <h4 style="margin-bottom: 10px; font-size: 15px;">Xem Trước Sơ Đồ</h4>
+                        <div class="stage-preview-container" style="background:#f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; text-align:center; min-height: 400px; max-height: 400px; overflow: auto;">
+                            <div style="background:#334155; color:white; padding:10px; border-radius: 4px; margin-bottom: 20px; font-weight:bold; letter-spacing: 2px;">
+                                SÂN KHẤU (STAGE)
+                            </div>
+                            <div id="stagePreviewMap" style="display:flex; flex-direction:column; gap: 20px; align-items:center;">
+                                <!-- Lưới ghế sinh ra ở đây -->
+                                <p style="color:#94a3b8; font-size:13px; margin-top:50px;">Bấm "Cập nhật xem trước" để xem lưới ghế</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-filter" onclick="previewStage()" style="width: 100%; margin-top: 10px; padding: 10px;">
+                            <i class="fa-solid fa-eye"></i> Cập nhật Xem trước
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-close-modal" onclick="closeStageModal()">Đóng</button>
+                <button type="button" class="btn-save" onclick="saveStageConfig()">Lưu Sơ Đồ & Sinh Vé</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== JAVASCRIPT ===================== -->
+    <script th:inline="javascript">
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('vi-VN');
+
+        setTimeout(() => {
+            document.querySelectorAll('.alert-success, .alert-error').forEach(el => el.style.display = 'none');
+        }, 3000);
+
+        function filterTable() {
+            const kw = document.getElementById('searchInput').value.toLowerCase();
+            const st = document.getElementById('statusFilter').value;
+            const rows = document.querySelectorAll('#eventTableBody tr[data-ma]');
+            let visible = 0;
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const badge = row.querySelector('.badge');
+                const matchKw = kw === '' || text.includes(kw);
+                const matchSt = st === '' || (badge && badge.textContent.trim() === st);
+                row.style.display = (matchKw && matchSt) ? '' : 'none';
+                if (matchKw && matchSt) visible++;
+            });
+            document.querySelector('.pagination-bar b').innerText = visible;
+        }
+
+        document.getElementById('searchInput').addEventListener('keyup', filterTable);
+
+        const modal = document.getElementById('eventModal');
+        const form = document.getElementById('eventForm');
+
+        function moModalThem() {
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-calendar-plus" style="margin-right:8px;color:#3b82f6;"></i>Thêm Sự Kiện';
+            form.action = '/sukien/tao-moi';
+            form.reset();
+            document.getElementById('m_maSK').value = '';
+            modal.classList.add('open');
+        }
+
+        function formatForInput(timestampStr) {
+            if (!timestampStr) return '';
+            const dt = new Date(timestampStr);
+            dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+            return dt.toISOString().slice(0, 16);
+        }
+
+        function moModalSua(maSK) {
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen" style="margin-right:8px;color:#eab308;"></i>Cập Nhật Sự Kiện';
+            form.action = '/sukien/cap-nhat/' + maSK;
+            form.reset();
+
+            fetch('/sukien/api/' + maSK)
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('m_maSK').value = d.maSK || '';
+                    document.getElementById('m_tenSK').value = d.tenSK || '';
+                    document.getElementById('m_moTaNgan').value = d.moTaNgan || '';
+                    document.getElementById('m_tongSoVe').value = d.tongSoVe || 0;
+                    document.getElementById('m_trangThaiSK').value = d.trangThaiSK || 'Sắp diễn ra';
+                    document.getElementById('m_hinhAnh').value = d.hinhAnh || '';
+                    document.getElementById('m_maDiaDiem').value = d.maDiaDiem || '';
+                    document.getElementById('m_maLoaiSK').value = d.maLoaiSK || '';
+                    document.getElementById('m_maNV').value = d.maNV || '';
+                    
+                    document.getElementById('m_thoiGianBatDau').value = formatForInput(d.thoiGianBatDau);
+                    document.getElementById('m_thoiGianKetThuc').value = formatForInput(d.thoiGianKetThuc);
+                    document.getElementById('m_thoiGianMoBan').value = formatForInput(d.thoiGianMoBan);
+                    document.getElementById('m_thoiGianDongBan').value = formatForInput(d.thoiGianDongBan);
+
+                    modal.classList.add('open');
+                })
+                .catch(() => alert('Không thể tải dữ liệu sự kiện!'));
+        }
+
+        function closeModal() {
+            modal.classList.remove('open');
+        }
+
+        function huySuKien(maSK) {
+            if (!confirm('Bạn có chắc muốn hủy sự kiện ' + maSK + '?')) return;
+            fetch('/sukien/xoa/' + maSK, { method: 'POST' })
+                .then(() => location.reload())
+                .catch(() => alert('Không thể hủy sự kiện!'));
+        }
+
+        modal.addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        // --- STAGE SETUP LOGIC ---
+        const stageModal = document.getElementById('stageModal');
+        let zoneCounter = 0;
+
+        function moModalSanKhau(maSK) {
+            document.getElementById('s_maSK').value = maSK;
+            document.getElementById('zoneList').innerHTML = '';
+            document.getElementById('stagePreviewMap').innerHTML = '<p style="color:#94a3b8; font-size:13px; margin-top:50px;">Bấm "Cập nhật xem trước" để xem lưới ghế</p>';
+            zoneCounter = 0;
+            
+            // Lấy data cũ nếu có
+            fetch('/sukien/api/' + maSK + '/so-do-ghe')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.zones && d.zones.length > 0) {
+                        d.zones.forEach(z => {
+                            addZoneForm(z.tenKhuVuc, z.giaVe, z.soHang, z.soGheMoiHang, z.mauSac);
+                        });
+                        previewStage();
+                    } else {
+                        // Thêm default
+                        addZoneForm('VIP', 1000000, 3, 10, '#ef4444');
+                        addZoneForm('Standard', 500000, 5, 15, '#3b82f6');
+                    }
+                    stageModal.classList.add('open');
+                })
+                .catch(() => alert('Lỗi lấy thông tin sơ đồ!'));
+        }
+
+        function closeStageModal() {
+            stageModal.classList.remove('open');
+        }
+
+        function addZoneForm(name = '', price = 0, rows = 0, cols = 0, color = '#3b82f6') {
+            const html = `
+                <div class="zone-card" id="zone_card_${zoneCounter}" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: #fff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <input type="text" class="z-name" placeholder="Tên khu (vd: VIP)" value="${name}" style="flex:1; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-weight: bold;">
+                        <input type="color" class="z-color" value="${color}" style="margin-left: 10px; border:none; width: 30px; height: 30px; cursor:pointer; background:none;">
+                        <button type="button" onclick="document.getElementById('zone_card_${zoneCounter}').remove()" style="margin-left:10px; background:none; border:none; color:#ef4444; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                    <div style="display:flex; gap: 10px;">
+                        <div style="flex: 1;">
+                            <label style="font-size:11px; color:#64748b;">Giá vé (VNĐ)</label>
+                            <input type="number" class="z-price" value="${price}" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size:11px; color:#64748b;">Số hàng</label>
+                            <input type="number" class="z-rows" value="${rows}" min="1" max="50" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size:11px; color:#64748b;">Ghế/hàng</label>
+                            <input type="number" class="z-cols" value="${cols}" min="1" max="100" style="width:100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('zoneList').insertAdjacentHTML('beforeend', html);
+            zoneCounter++;
+        }
+
+        function previewStage() {
+            const preview = document.getElementById('stagePreviewMap');
+            preview.innerHTML = '';
+            
+            const cards = document.querySelectorAll('.zone-card');
+            if(cards.length === 0) {
+                preview.innerHTML = '<p style="color:#94a3b8; font-size:13px; margin-top:50px;">Chưa có khu vực nào.</p>';
+                return;
+            }
+
+            cards.forEach(card => {
+                const name = card.querySelector('.z-name').value;
+                const rows = parseInt(card.querySelector('.z-rows').value) || 0;
+                const cols = parseInt(card.querySelector('.z-cols').value) || 0;
+                const color = card.querySelector('.z-color').value;
+
+                if (rows > 0 && cols > 0) {
+                    const zoneWrap = document.createElement('div');
+                    zoneWrap.style.marginBottom = '15px';
+                    
+                    const title = document.createElement('div');
+                    title.textContent = name;
+                    title.style.fontSize = '12px';
+                    title.style.fontWeight = 'bold';
+                    title.style.color = '#64748b';
+                    title.style.marginBottom = '5px';
+                    zoneWrap.appendChild(title);
+
+                    for (let r = 0; r < rows; r++) {
+                        const rowDiv = document.createElement('div');
+                        rowDiv.style.display = 'flex';
+                        rowDiv.style.justifyContent = 'center';
+                        rowDiv.style.gap = '4px';
+                        rowDiv.style.marginBottom = '4px';
+                        
+                        // Just limit preview to max 30 cols to avoid freezing browser if they input 1000
+                        const previewCols = Math.min(cols, 30);
+                        
+                        for (let c = 0; c < previewCols; c++) {
+                            const seat = document.createElement('div');
+                            seat.style.width = '16px';
+                            seat.style.height = '16px';
+                            seat.style.backgroundColor = color;
+                            seat.style.borderRadius = '4px';
+                            seat.style.border = '1px solid rgba(0,0,0,0.1)';
+                            rowDiv.appendChild(seat);
+                        }
+                        if (cols > 30) {
+                            const dots = document.createElement('div');
+                            dots.textContent = '...';
+                            dots.style.fontSize = '10px';
+                            dots.style.lineHeight = '16px';
+                            rowDiv.appendChild(dots);
+                        }
+                        zoneWrap.appendChild(rowDiv);
+                        // limit rows preview too
+                        if (r >= 19) {
+                           const rdots = document.createElement('div');
+                           rdots.textContent = '... còn nữa';
+                           rdots.style.fontSize = '10px';
+                           zoneWrap.appendChild(rdots);
+                           break; 
+                        }
+                    }
+                    preview.appendChild(zoneWrap);
+                }
+            });
+        }
+
+        function saveStageConfig() {
+            const maSK = document.getElementById('s_maSK').value;
+            const cards = document.querySelectorAll('.zone-card');
+            
+            const payload = {
+                danhSachKhuVuc: []
+            };
+
+            cards.forEach(card => {
+                payload.danhSachKhuVuc.push({
+                    tenKhuVuc: card.querySelector('.z-name').value,
+                    mauSac: card.querySelector('.z-color').value,
+                    giaVe: parseFloat(card.querySelector('.z-price').value) || 0,
+                    soHang: parseInt(card.querySelector('.z-rows').value) || 0,
+                    soGheMoiHang: parseInt(card.querySelector('.z-cols').value) || 0
+                });
+            });
+
+            if (!confirm('Bạn có chắc muốn lưu sơ đồ mới? Sơ đồ cũ và các vé cũ (nếu có) sẽ bị xóa!')) return;
+
+            fetch('/sukien/api/' + maSK + '/thiet-lap-san-khau', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) {
+                    alert('Lỗi: ' + d.error);
+                } else {
+                    alert(d.message);
+                    location.reload();
+                }
+            })
+            .catch(() => alert('Lỗi kết nối tới server!'));
+        }
+
+        stageModal.addEventListener('click', function (e) {
+            if (e.target === this) closeStageModal();
+        });
+    </script>
+</body>
+</html>
