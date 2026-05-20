@@ -19,8 +19,7 @@ public class AuthController {
     public String showLogin(
             @RequestParam(required = false) String redirectUrl,
             HttpSession session,
-            Model model
-    ) {
+            Model model) {
         if (session.getAttribute("nguoiDung") != null) {
             return "redirect:/";
         }
@@ -35,8 +34,7 @@ public class AuthController {
             @RequestParam String matKhau,
             @RequestParam(required = false) String redirectUrl,
             HttpSession session,
-            Model model
-    ) {
+            Model model) {
         try {
             NguoiDung nguoiDung = authService.dangNhap(tenTaiKhoan, matKhau);
 
@@ -46,8 +44,8 @@ public class AuthController {
             if (redirectUrl != null && !redirectUrl.isBlank()) {
                 return "redirect:" + redirectUrl;
             }
-            
-            return nguoiDung.isAdmin() ? "redirect:/admin/dashboard" : "redirect:/su-kien";
+
+            return nguoiDung.isAdmin() ? "redirect:/taikhoan" : "redirect:/taikhoan";
 
         } catch (Exception e) {
             model.addAttribute("error", e.getMessage());
@@ -55,6 +53,41 @@ public class AuthController {
             model.addAttribute("redirectUrl", redirectUrl);
             model.addAttribute("showNavbar", false);
             return "auth/login";
+        }
+    }
+
+    @GetMapping("/dang-ky")
+    public String showRegister(HttpSession session, Model model) {
+        if (session.getAttribute("nguoiDung") != null) {
+            return "redirect:/";
+        }
+        model.addAttribute("showNavbar", false);
+        return "auth/register";
+    }
+
+    @PostMapping("/dang-ky")
+    public String processRegister(
+            @RequestParam String tenTaiKhoan,
+            @RequestParam String email,
+            @RequestParam String sdt,
+            @RequestParam String matKhau,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        try {
+            authService.dangKy(tenTaiKhoan, email, sdt, matKhau);
+            redirectAttributes.addFlashAttribute("success", "Đăng ký thành công! Vui lòng đăng nhập.");
+            return "redirect:/dang-nhap";
+        } catch (Exception e) {
+            String errorMessage = e.getMessage();
+            if (errorMessage == null || errorMessage.contains("JDBC exception") || errorMessage.contains("SQL")) {
+                errorMessage = "Lỗi hệ thống khi đăng ký. Vui lòng thử lại sau.";
+            }
+            model.addAttribute("error", errorMessage);
+            model.addAttribute("tenTaiKhoan", tenTaiKhoan);
+            model.addAttribute("email", email);
+            model.addAttribute("sdt", sdt);
+            model.addAttribute("showNavbar", false);
+            return "auth/register";
         }
     }
 

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Thanh toán - Dề Dê Tickets</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/css/main.css}">
+    <style>
+        body { background: #f8fafc; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .checkout-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); overflow: hidden; }
+        .checkout-header { background: #1e3a8a; color: white; padding: 20px 30px; text-align: center; }
+        .checkout-header h2 { margin: 0; font-family: 'Times New Roman', Times, serif; }
+        .timer-box { font-size: 24px; font-weight: bold; color: #fbbf24; margin-top: 10px; }
+        
+        .checkout-body { padding: 30px; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px dashed #e2e8f0; }
+        .info-label { color: #64748b; font-weight: bold; }
+        .info-value { color: #1e293b; font-weight: bold; text-align: right; }
+        
+        .total-row { display: flex; justify-content: space-between; padding: 20px 0; font-size: 20px; font-weight: bold; border-top: 2px solid #e2e8f0; margin-top: 20px; }
+        .total-value { color: #ef4444; font-size: 24px; }
+        
+        .action-box { display: flex; gap: 15px; margin-top: 30px; }
+        .btn-pay { flex: 1; padding: 15px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s; color: white; text-align: center; }
+        .btn-success { background: #10b981; }
+        .btn-success:hover { background: #059669; }
+        .btn-fail { background: #ef4444; }
+        .btn-fail:hover { background: #dc2626; }
+        
+        .navbar-public { display: flex; justify-content: space-between; align-items: center; padding: 15px 40px; background: white; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .navbar-brand { font-size: 24px; font-weight: bold; color: #2563eb; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <nav class="navbar-public">
+        <a href="/" class="navbar-brand"><i class="fa-solid fa-ticket"></i> Dề Dê Tickets</a>
+    </nav>
+
+    <div class="container">
+        <div class="checkout-card">
+            <div class="checkout-header">
+                <h2>Hoàn Tất Thanh Toán</h2>
+                <div class="timer-box">Thời gian giữ ghế: <span id="countdown">10:00</span></div>
+            </div>
+            
+            <div class="checkout-body">
+                <h3 style="margin-top:0; color: #1e3a8a; font-family: 'Times New Roman', Times, serif;">Thông tin đơn hàng</h3>
+                
+                <div class="info-row">
+                    <span class="info-label">Sự kiện:</span>
+                    <span class="info-value" th:text="${suKien.tenSK}">Tên sự kiện</span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Ghế đã giữ:</span>
+                    <span class="info-value">
+                        <span th:each="ghe, iterStat : ${gheList}">
+                            <span th:text="${ghe.tenGhe}"></span><span th:if="${!iterStat.last}">, </span>
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="info-row">
+                    <span class="info-label">Khách hàng:</span>
+                    <span class="info-value">Demo User (KH001)</span>
+                </div>
+                
+                <div class="total-row">
+                    <span>TỔNG THANH TOÁN:</span>
+                    <span class="total-value" th:text="${#numbers.formatDecimal(tongTien, 0, 'COMMA', 0, 'POINT')} + ' VNĐ'">0 VNĐ</span>
+                </div>
+                
+                <!-- Mô phỏng thanh toán -->
+                <div style="background: #eff6ff; border: 1px dashed #3b82f6; padding: 15px; border-radius: 8px; margin-top: 30px; text-align: center;">
+                    <p style="margin: 0 0 15px; color: #1e3a8a; font-weight: bold;">[MÔ PHỎNG CỔNG THANH TOÁN]</p>
+                    <div class="action-box" style="margin-top: 0;">
+                        <button class="btn-pay btn-success" onclick="processPayment(true)">
+                            <i class="fa-solid fa-check-circle"></i> Giả lập Thanh Toán THÀNH CÔNG
+                        </button>
+                        <button class="btn-pay btn-fail" onclick="processPayment(false)">
+                            <i class="fa-solid fa-times-circle"></i> Giả lập Thanh Toán THẤT BẠI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <input type="hidden" id="seatsParam" th:value="${seatsParam}">
+
+    <script>
+        // Đếm ngược 10 phút
+        let timeLeft = 600; // 10 minutes in seconds
+        const timerEl = document.getElementById('countdown');
+        
+        const countdownTimer = setInterval(() => {
+            timeLeft--;
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            timerEl.textContent = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimer);
+                alert("Đã hết thời gian giữ ghế. Đơn hàng đã bị hủy và ghế đã được trả lại.");
+                window.location.href = '/';
+            }
+        }, 1000);
+        
+        function processPayment(isSuccess) {
+            clearInterval(countdownTimer);
+            const seats = document.getElementById('seatsParam').value;
+            
+            const payload = {
+                seats: seats,
+                success: isSuccess
+            };
+            
+            fetch('/api/booking/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(d => {
+                if(d.error) {
+                    alert("Lỗi: " + d.error);
+                } else {
+                    alert(d.message);
+                    window.location.href = d.redirect;
+                }
+            })
+            .catch(() => alert('Lỗi kết nối tới server!'));
+        }
+    </script>
+</body>
+</html>
