@@ -27,6 +27,10 @@
 
         <!-- Content Area -->
         <div class="content-area">
+            <div class="admin-tabs">
+                <a th:href="@{/taikhoan}" class="admin-tab active">Tài khoản</a>
+                <a th:href="@{/taikhoan/vai-tro}" class="admin-tab">Vai trò</a>
+            </div>
 
             <!-- Toolbar -->
             <div class="toolbar">
@@ -39,7 +43,7 @@
                         </div>
                         <select name="trangThai" id="statusFilter" class="filter-select">
                             <option value="">Tất cả trạng thái</option>
-                            <option value="Đang hoạt động" th:selected="${trangThaiFilter == 'Đang hoạt động'}">Hoạt động</option>
+                            <option value="Đang hoạt động" th:selected="${trangThaiFilter == 'Đang hoạt động'}">Đang hoạt động</option>
                             <option value="Bị khóa" th:selected="${trangThaiFilter == 'Bị khóa'}">Bị khóa</option>
                             <option value="Không hoạt động" th:selected="${trangThaiFilter == 'Không hoạt động'}">Không hoạt động</option>
                         </select>
@@ -85,13 +89,16 @@
                                 <td th:text="${user.sdt != null ? user.sdt : '-'}"></td>
                                 <td th:text="${user.gioiTinh != null ? user.gioiTinh : '-'}"></td>
                                 <td>
-                                    <span th:each="ctv : ${user.chiTietVaiTros}" class="badge badge-role"
-                                          th:text="${ctv.maVaiTro}"></span>
+                                    <span th:each="ctv : ${user.chiTietVaiTros}"
+                                          th:if="${!#strings.startsWith(ctv.maVaiTro, 'VT')}"
+                                          class="badge badge-role"
+                                          th:text="${ctv.maVaiTro == 'ADMIN' ? 'Quản trị viên' : (ctv.maVaiTro == 'CUSTOMER' ? 'Khách hàng' : (ctv.maVaiTro == 'STAFF' ? 'Nhân viên soát vé' : (ctv.maVaiTro == 'ORGANIZER' ? 'Ban tổ chức' : (ctv.vaiTro != null ? ctv.vaiTro.tenVaiTro : ctv.maVaiTro))))}"></span>
                                 </td>
                                 <td style="text-align:center;">
-                                    <span th:if="${user.trangThaiND == 'Đang hoạt động'}" class="badge badge-active">Hoạt động</span>
+                                    <span th:if="${user.trangThaiND == 'Đang hoạt động'}" class="badge badge-active">Đang hoạt động</span>
                                     <span th:if="${user.trangThaiND == 'Bị khóa'}" class="badge badge-locked">Bị khóa</span>
-                                    <span th:if="${user.trangThaiND != 'Đang hoạt động' and user.trangThaiND != 'Bị khóa'}" class="badge badge-pending" th:text="${user.trangThaiND}">Khác</span>
+                                    <span th:if="${user.trangThaiND == 'Không hoạt động'}" class="badge badge-pending">Không hoạt động</span>
+                                    <span th:if="${user.trangThaiND != 'Đang hoạt động' and user.trangThaiND != 'Bị khóa' and user.trangThaiND != 'Không hoạt động'}" class="badge badge-pending" th:text="${user.trangThaiND}">Khác</span>
                                 </td>
                                 <td style="text-align:center;">
                                     <button class="btn-action btn-edit" title="Sửa"
@@ -170,20 +177,21 @@
                 <div class="form-grid-2">
                     <div class="form-group">
                         <label>Trạng thái <span style="color:red;">*</span></label>
-                        <select th:field="*{trangThaiND}">
-                            <option value="Đang hoạt động">Hoạt động</option>
+                        <select th:field="*{trangThaiND}" class="status-select">
+                            <option value="Đang hoạt động">Đang hoạt động</option>
                             <option value="Không hoạt động">Không hoạt động</option>
                             <option value="Bị khóa">Bị khóa</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Vai trò hệ thống</label>
-                        <div class="roles-group">
-                            <label th:each="vt : ${danhSachVaiTro}">
-                                <input type="checkbox" name="danhSachVaiTro" th:value="${vt.maVaiTro}">
-                                <span th:text="${vt.tenVaiTro}"></span>
-                            </label>
-                        </div>
+                </div>
+
+                <div class="form-group role-section">
+                    <label>Vai trò hệ thống</label>
+                    <div class="roles-group">
+                        <label th:each="vt : ${danhSachVaiTro}">
+                            <input type="checkbox" name="danhSachVaiTro" th:value="${vt.maVaiTro}">
+                            <span th:text="${vt.maVaiTro == 'ADMIN' ? 'Quản trị viên' : (vt.maVaiTro == 'CUSTOMER' ? 'Khách hàng' : (vt.maVaiTro == 'STAFF' ? 'Nhân viên soát vé' : (vt.maVaiTro == 'ORGANIZER' ? 'Ban tổ chức' : vt.maVaiTro)))}"></span>
+                        </label>
                     </div>
                 </div>
 
@@ -249,20 +257,21 @@
                 <div class="form-grid-2">
                     <div class="form-group">
                         <label>Trạng thái <span style="color:red;">*</span></label>
-                        <select id="edit_trangThaiND" name="trangThaiND">
-                            <option value="Đang hoạt động">Hoạt động</option>
+                        <select id="edit_trangThaiND" name="trangThaiND" class="status-select">
+                            <option value="Đang hoạt động">Đang hoạt động</option>
                             <option value="Không hoạt động">Không hoạt động</option>
                             <option value="Bị khóa">Bị khóa</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label>Vai trò hệ thống</label>
-                        <div class="roles-group" id="editRolesGroup">
-                            <label th:each="vt : ${danhSachVaiTro}">
-                                <input type="checkbox" name="danhSachVaiTro" th:value="${vt.maVaiTro}">
-                                <span th:text="${vt.tenVaiTro}"></span>
-                            </label>
-                        </div>
+                </div>
+
+                <div class="form-group role-section">
+                    <label>Vai trò hệ thống</label>
+                    <div class="roles-group" id="editRolesGroup">
+                        <label th:each="vt : ${danhSachVaiTro}">
+                            <input type="checkbox" name="danhSachVaiTro" th:value="${vt.maVaiTro}">
+                            <span th:text="${vt.maVaiTro == 'ADMIN' ? 'Quản trị viên' : (vt.maVaiTro == 'CUSTOMER' ? 'Khách hàng' : (vt.maVaiTro == 'STAFF' ? 'Nhân viên soát vé' : (vt.maVaiTro == 'ORGANIZER' ? 'Ban tổ chức' : vt.maVaiTro)))}"></span>
+                        </label>
                     </div>
                 </div>
 

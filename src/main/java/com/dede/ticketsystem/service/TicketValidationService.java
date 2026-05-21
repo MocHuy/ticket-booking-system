@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class TicketValidationService {
@@ -19,11 +18,13 @@ public class TicketValidationService {
     private final KhuVucRepository khuVucRepository;
     private final DonHangRepository donHangRepository;
     private final KhachHangRepository khachHangRepository;
+    private final IdGeneratorService idGeneratorService;
 
     public TicketValidationService(VeService veService, VeRepository veRepository,
                                    LichSuSoatVeRepository lichSuSoatVeRepository, GheRepository gheRepository,
                                    KhuVucRepository khuVucRepository, DonHangRepository donHangRepository,
-                                   KhachHangRepository khachHangRepository) {
+                                   KhachHangRepository khachHangRepository,
+                                   IdGeneratorService idGeneratorService) {
         this.veService = veService;
         this.veRepository = veRepository;
         this.lichSuSoatVeRepository = lichSuSoatVeRepository;
@@ -31,6 +32,7 @@ public class TicketValidationService {
         this.khuVucRepository = khuVucRepository;
         this.donHangRepository = donHangRepository;
         this.khachHangRepository = khachHangRepository;
+        this.idGeneratorService = idGeneratorService;
     }
 
     @Transactional
@@ -111,7 +113,7 @@ public class TicketValidationService {
 
     private void saveScanHistory(String status, String congSoat, String nguonDuLieu, Timestamp thoiGianQuet, String maVe, String maNV) {
         LichSuSoatVe l = new LichSuSoatVe();
-        l.setMaLichSu("LS-" + UUID.randomUUID().toString().substring(0, 8) + "-" + System.currentTimeMillis());
+        l.setMaLichSu(idGeneratorService.nextLichSuSoatVeId());
         l.setThoiGianQuet(thoiGianQuet);
         l.setKetQuaQuet(status);
         l.setCongSoat(congSoat);

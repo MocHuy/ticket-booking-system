@@ -29,6 +29,7 @@ public class BookingService {
     private final KhuVucRepository khuVucRepository;
     private final SuKienRepository suKienRepository;
     private final GiaoDichThanhToanRepository giaoDichThanhToanRepository;
+    private final IdGeneratorService idGeneratorService;
 
     @Autowired
     private EmailService emailService;
@@ -51,13 +52,15 @@ public class BookingService {
                           VeRepository veRepository, 
                           KhuVucRepository khuVucRepository,
                           SuKienRepository suKienRepository,
-                          GiaoDichThanhToanRepository giaoDichThanhToanRepository) {
+                          GiaoDichThanhToanRepository giaoDichThanhToanRepository,
+                          IdGeneratorService idGeneratorService) {
         this.gheRepository = gheRepository;
         this.donHangRepository = donHangRepository;
         this.veRepository = veRepository;
         this.khuVucRepository = khuVucRepository;
         this.suKienRepository = suKienRepository;
         this.giaoDichThanhToanRepository = giaoDichThanhToanRepository;
+        this.idGeneratorService = idGeneratorService;
     }
 
     @Transactional
@@ -141,7 +144,7 @@ public class BookingService {
         }
 
         // Tạo DONHANG trạng thái "Chờ thanh toán"
-        String maDonHang = "DH-" + System.currentTimeMillis() + "-" + java.util.UUID.randomUUID().toString().substring(0, 8);
+        String maDonHang = idGeneratorService.nextDonHangId();
         Timestamp thoiGianHetHan = new Timestamp(now.getTime() + 10 * 60 * 1000); // now + 10 phút
 
         DonHang dh = new DonHang();
@@ -255,17 +258,8 @@ public class BookingService {
                 KhuVuc kv = khuVucRepository.findById(ghe.getMaKhuVuc())
                         .orElseThrow(() -> new RuntimeException("Khu vực của ghế không tồn tại!"));
 
-                // Sinh MaVe unique
-                String maVe;
-                do {
-                    maVe = "VE-" + java.util.UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-                } while (veRepository.existsByMaVe(maVe));
-
-                // Sinh MaQR unique
-                String maQR;
-                do {
-                    maQR = "QR-" + java.util.UUID.randomUUID().toString().replace("-", "").toUpperCase();
-                } while (veRepository.existsByMaQR(maQR));
+                String maVe = idGeneratorService.nextVeId();
+                String maQR = buildQrCode(maVe);
 
                 Ve ve = new Ve();
                 ve.setMaVe(maVe);
@@ -395,5 +389,16 @@ public class BookingService {
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void saveGiaoDichNewTransaction(GiaoDichThanhToan gd) {
         giaoDichThanhToanRepository.save(gd);
+    }
+
+    private String buildQrCode(String maVe) {
+        String base = "QR-" + maVe;
+        String candidate = base;
+        int suffix = 1;
+        while (veRepository.existsByMaQR(candidate)) {
+            suffix++;
+            candidate = base + "-" + suffix;
+        }
+        return candidate;
     }
 }

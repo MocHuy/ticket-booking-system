@@ -19,6 +19,7 @@ public class QueueService {
 
     private final HangDoiAoRepository hangDoiAoRepository;
     private final DonHangRepository donHangRepository;
+    private final IdGeneratorService idGeneratorService;
 
     @Value("${queue.threshold.active-holds:100}")
     private int threshold;
@@ -29,9 +30,12 @@ public class QueueService {
     @Value("${queue.token-ttl-minutes:5}")
     private int tokenTtlMinutes;
 
-    public QueueService(HangDoiAoRepository hangDoiAoRepository, DonHangRepository donHangRepository) {
+    public QueueService(HangDoiAoRepository hangDoiAoRepository,
+                        DonHangRepository donHangRepository,
+                        IdGeneratorService idGeneratorService) {
         this.hangDoiAoRepository = hangDoiAoRepository;
         this.donHangRepository = donHangRepository;
+        this.idGeneratorService = idGeneratorService;
     }
 
     /**
@@ -79,7 +83,7 @@ public class QueueService {
 
             Timestamp now = new Timestamp(System.currentTimeMillis());
             HangDoiAo h = new HangDoiAo();
-            h.setMaHangDoi("HD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+            h.setMaHangDoi(idGeneratorService.nextHangDoiId());
             h.setViTriHang(nextViTri);
             h.setThoiGianVaoHang(now);
             // Estimated wait: now + position * 30 seconds

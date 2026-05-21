@@ -3,8 +3,6 @@ package com.dede.ticketsystem.controller;
 import com.dede.ticketsystem.model.SuKien;
 import com.dede.ticketsystem.model.SuKienDTO;
 import com.dede.ticketsystem.model.ThietLapSanKhauDTO;
-import com.dede.ticketsystem.model.KhuVuc;
-import com.dede.ticketsystem.model.Ghe;
 import com.dede.ticketsystem.service.SuKienService;
 import com.dede.ticketsystem.repository.KhuVucRepository;
 import com.dede.ticketsystem.repository.GheRepository;
@@ -12,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.LinkedHashMap;
@@ -90,6 +89,7 @@ public class SuKienController {
                     data.put("soVeDaBan", sk.getSoVeDaBan());
                     data.put("trangThaiSK", sk.getTrangThaiSK());
                     data.put("maLoaiSK", sk.getMaLoaiSK());
+                    data.put("tenLoaiSK", timTenLoaiSK(sk.getMaLoaiSK()));
                     data.put("maDiaDiem", sk.getMaDiaDiem());
                     data.put("maNV", sk.getMaNV());
                     return ResponseEntity.ok(data);
@@ -98,9 +98,12 @@ public class SuKienController {
     }
 
     @PostMapping("/tao-moi")
-    public String taoMoi(@ModelAttribute SuKienDTO dto, RedirectAttributes redirectAttributes) {
+    public String taoMoi(@ModelAttribute SuKienDTO dto,
+                         @RequestParam(required = false) MultipartFile hinhAnhFile,
+                         @RequestParam(required = false) MultipartFile hinhAnhThumbFile,
+                         RedirectAttributes redirectAttributes) {
         try {
-            SuKien created = suKienService.taoSuKien(dto);
+            SuKien created = suKienService.taoSuKien(dto, hinhAnhFile, hinhAnhThumbFile);
             redirectAttributes.addFlashAttribute("thanhCong", "Thêm sự kiện " + created.getMaSK() + " thành công!");
         } catch (Exception e) {
             e.printStackTrace();
@@ -118,22 +121,33 @@ public class SuKienController {
     }
 
     @PostMapping("/cap-nhat/{maSK}")
-    public String capNhat(@PathVariable String maSK, @ModelAttribute SuKienDTO dto, RedirectAttributes redirectAttributes) {
-        return xuLyCapNhat(maSK, dto, redirectAttributes);
+    public String capNhat(@PathVariable String maSK,
+                          @ModelAttribute SuKienDTO dto,
+                          @RequestParam(required = false) MultipartFile hinhAnhFile,
+                          @RequestParam(required = false) MultipartFile hinhAnhThumbFile,
+                          RedirectAttributes redirectAttributes) {
+        return xuLyCapNhat(maSK, dto, hinhAnhFile, hinhAnhThumbFile, redirectAttributes);
     }
 
     @PostMapping("/update")
-    public String capNhatTuForm(@ModelAttribute SuKienDTO dto, RedirectAttributes redirectAttributes) {
+    public String capNhatTuForm(@ModelAttribute SuKienDTO dto,
+                                @RequestParam(required = false) MultipartFile hinhAnhFile,
+                                @RequestParam(required = false) MultipartFile hinhAnhThumbFile,
+                                RedirectAttributes redirectAttributes) {
         if (dto.getMaSK() == null || dto.getMaSK().isBlank()) {
             redirectAttributes.addFlashAttribute("loi", "Lỗi cập nhật: Không xác định được mã sự kiện.");
             return "redirect:/sukien";
         }
-        return xuLyCapNhat(dto.getMaSK().trim(), dto, redirectAttributes);
+        return xuLyCapNhat(dto.getMaSK().trim(), dto, hinhAnhFile, hinhAnhThumbFile, redirectAttributes);
     }
 
-    private String xuLyCapNhat(String maSK, SuKienDTO dto, RedirectAttributes redirectAttributes) {
+    private String xuLyCapNhat(String maSK,
+                              SuKienDTO dto,
+                              MultipartFile hinhAnhFile,
+                              MultipartFile hinhAnhThumbFile,
+                              RedirectAttributes redirectAttributes) {
         try {
-            suKienService.capNhatSuKien(maSK, dto);
+            suKienService.capNhatSuKien(maSK, dto, hinhAnhFile, hinhAnhThumbFile);
             redirectAttributes.addFlashAttribute("thanhCong", "Cập nhật sự kiện " + maSK + " thành công!");
         } catch (Exception e) {
             String errorMsg = e.getMessage();
@@ -143,6 +157,21 @@ public class SuKienController {
             redirectAttributes.addFlashAttribute("loi", "Lỗi cập nhật: " + errorMsg);
         }
         return "redirect:/sukien";
+    }
+
+    private String timTenLoaiSK(String maLoaiSK) {
+        if (maLoaiSK == null || maLoaiSK.isBlank()) {
+            return null;
+        }
+        try {
+            return jdbcTemplate.queryForObject(
+                    "SELECT TenLoaiSK FROM LOAISUKIEN WHERE MaLoaiSK = ?",
+                    String.class,
+                    maLoaiSK
+            );
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @PostMapping("/xoa/{maSK}")
@@ -180,25 +209,7 @@ public class SuKienController {
     @ResponseBody
     public ResponseEntity<?> laySoDoGhe(@PathVariable String maSK) {
         try {
-            List<KhuVuc> zones = khuVucRepository.findByMaSK(maSK);
-            List<Ghe> seats = gheRepository.findByMaSK(maSK);
-            for (KhuVuc kv : zones) {
-                java.util.Set<String> rows = new java.util.HashSet<>();
-                int maxCol = 0;
-                for (Ghe g : seats) {
-                    if (g.getMaKhuVuc() != null && g.getMaKhuVuc().equals(kv.getMaKhuVuc())) {
-                        if (g.getHangGhe() != null) {
-                            rows.add(g.getHangGhe());
-                        }
-                        if (g.getCotGhe() != null && g.getCotGhe() > maxCol) {
-                            maxCol = g.getCotGhe();
-                        }
-                    }
-                }
-                kv.setSoHang(rows.size());
-                kv.setSoGheMoiHang(maxCol);
-            }
-            return ResponseEntity.ok(Map.of("zones", zones, "seats", seats));
+            return ResponseEntity.ok(suKienService.getSeatMap(maSK));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body(Map.of("error", "Đã có lỗi hệ thống xảy ra khi tải dữ liệu. Vui lòng thử lại."));

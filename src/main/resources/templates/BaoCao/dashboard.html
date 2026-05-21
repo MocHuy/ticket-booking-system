@@ -276,21 +276,21 @@
             <div class="row g-3 mb-4">
                 <!-- Doanh thu -->
                 <div class="col-md-4 col-lg-3">
-                    <div class="card stat-card primary h-100 p-3">
+                    <div class="card stat-card primary h-100 p-3 ui-hover-card">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="text-muted fw-semibold small">Tổng doanh thu</span>
                             <div class="stat-icon bg-gradient-primary">
                                 <i class="bi bi-currency-dollar"></i>
                             </div>
                         </div>
-                        <div class="value-large mb-1" th:text="${tongQuan.tongDoanhThu != null ? #numbers.formatDecimal(tongQuan.tongDoanhThu, 0, 'POINT', 0, 'COMMA') + ' đ' : '0 đ'}">0 đ</div>
+                        <div class="value-large mb-1 report-money" th:text="${tongQuan.tongDoanhThu != null ? #numbers.formatDecimal(tongQuan.tongDoanhThu, 0, 'POINT', 0, 'COMMA') + ' ₫' : '0 ₫'}">0 ₫</div>
                         <span class="text-muted small"><i class="bi bi-check-circle-fill text-success me-1"></i>Đơn hàng đã thanh toán</span>
                     </div>
                 </div>
 
                 <!-- Vé bán -->
                 <div class="col-md-4 col-lg-3">
-                    <div class="card stat-card info h-100 p-3">
+                    <div class="card stat-card info h-100 p-3 ui-hover-card">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="text-muted fw-semibold small">Vé đã bán thành công</span>
                             <div class="stat-icon bg-gradient-info">
@@ -304,7 +304,7 @@
 
                 <!-- Trạng thái đơn -->
                 <div class="col-md-4 col-lg-3">
-                    <div class="card stat-card warning h-100 p-3">
+                    <div class="card stat-card warning h-100 p-3 ui-hover-card">
                         <div class="d-flex align-items-center justify-content-between">
                             <span class="text-muted fw-semibold small">Tổng quan đơn hàng</span>
                             <div class="stat-icon bg-gradient-warning">
@@ -330,7 +330,7 @@
 
                 <!-- Tỷ lệ thanh toán thành công + lấp đầy -->
                 <div class="col-md-6 col-lg-3">
-                    <div class="card stat-card success h-100 p-3">
+                    <div class="card stat-card success h-100 p-3 ui-hover-card">
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <span class="text-muted fw-semibold small">Tỷ lệ hiệu suất</span>
                             <div class="stat-icon bg-gradient-success">
@@ -384,7 +384,7 @@
                     <span class="badge bg-light text-muted border px-2 py-1 rounded" style="font-size: 12px;" th:text="${baoCaoSuKienList != null ? baoCaoSuKienList.size() + ' sự kiện' : '0 sự kiện'}">0 sự kiện</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover table-dd align-middle mb-0">
+                    <table class="table table-hover table-dd align-middle mb-0 report-table">
                         <thead>
                             <tr>
                                 <th>Mã SK</th>
@@ -392,7 +392,7 @@
                                 <th class="text-end">Tổng số vé</th>
                                 <th class="text-end">Vé đã bán</th>
                                 <th class="text-end">Vé còn lại</th>
-                                <th class="text-end">Doanh thu</th>
+                                <th class="text-end money-cell">Doanh thu</th>
                                 <th class="text-end">Lấp đầy</th>
                                 <th class="text-end">Lượt Xem</th>
                                 <th class="text-end">Lượt Click</th>
@@ -413,7 +413,9 @@
                                 <td class="text-end" th:text="${#numbers.formatDecimal(row.tongSoVe, 0, 'POINT', 0, 'COMMA')}">0</td>
                                 <td class="text-end fw-semibold text-primary" th:text="${#numbers.formatDecimal(row.soVeDaBan, 0, 'POINT', 0, 'COMMA')}">0</td>
                                 <td class="text-end text-muted" th:text="${#numbers.formatDecimal(row.soVeConLai, 0, 'POINT', 0, 'COMMA')}">0</td>
-                                <td class="text-end fw-bold text-success" th:text="${row.doanhThu != null ? #numbers.formatDecimal(row.doanhThu, 0, 'POINT', 0, 'COMMA') + ' đ' : '0 đ'}">0 đ</td>
+                                <td class="text-end fw-bold text-success money-cell">
+                                    <span class="report-money" th:text="${row.doanhThu != null ? #numbers.formatDecimal(row.doanhThu, 0, 'POINT', 0, 'COMMA') + ' ₫' : '0 ₫'}">0 ₫</span>
+                                </td>
                                 <td class="text-end text-dark">
                                     <span th:text="${#numbers.formatDecimal(row.tyLeLapDay, 1, 2) + '%'}">0.00%</span>
                                     <div class="progress mt-1" style="height: 4px;">

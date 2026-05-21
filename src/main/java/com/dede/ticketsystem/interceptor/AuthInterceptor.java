@@ -21,6 +21,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         if (relativeUri.startsWith("/css/") || 
             relativeUri.startsWith("/js/") || 
             relativeUri.startsWith("/images/") || 
+            relativeUri.startsWith("/uploads/") ||
             relativeUri.startsWith("/assets/") || 
             relativeUri.startsWith("/webjars/") || 
             relativeUri.equals("/favicon.ico")) {
@@ -37,6 +38,59 @@ public class AuthInterceptor implements HandlerInterceptor {
                               "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
 
         // 1. Kiểm tra các route của Customer
+        if (isAuthenticatedRoute(relativeUri)) {
+            if (nguoiDung == null) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Bạn cần đăng nhập", "/dang-nhap");
+                    return false;
+                }
+                String currentPath = relativeUri;
+                if (request.getQueryString() != null) {
+                    currentPath += "?" + request.getQueryString();
+                }
+                response.sendRedirect(contextPath + "/dang-nhap?redirect=" + java.net.URLEncoder.encode(currentPath, java.nio.charset.StandardCharsets.UTF_8));
+                return false;
+            }
+        }
+
+        if (isTicketSimulationRoute(relativeUri)) {
+            if (nguoiDung == null) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Bạn cần đăng nhập", "/dang-nhap");
+                    return false;
+                }
+                response.sendRedirect(contextPath + "/dang-nhap?redirect=" + relativeUri);
+                return false;
+            }
+            if (roles == null || (!roles.contains("ADMIN") && !roles.contains("STAFF") && !roles.contains("ORGANIZER"))) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập", null);
+                    return false;
+                }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Admin, Staff hoặc Organizer mới có quyền giả lập dùng vé.");
+                return false;
+            }
+        }
+
+        if (isTicketManagementRoute(relativeUri)) {
+            if (nguoiDung == null) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Bạn cần đăng nhập", "/dang-nhap");
+                    return false;
+                }
+                response.sendRedirect(contextPath + "/dang-nhap?redirect=" + relativeUri);
+                return false;
+            }
+            if (roles == null || (!roles.contains("ADMIN") && !roles.contains("STAFF") && !roles.contains("ORGANIZER"))) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập", null);
+                    return false;
+                }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập quản lý vé.");
+                return false;
+            }
+        }
+
         if (isCustomerRoute(relativeUri)) {
             if (nguoiDung == null) {
                 if (isApiOrAjax) {
@@ -56,6 +110,25 @@ public class AuthInterceptor implements HandlerInterceptor {
                     return false;
                 }
                 response.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập chức năng này.");
+                return false;
+            }
+        }
+
+        if (isAdminOnlyRoute(relativeUri)) {
+            if (nguoiDung == null) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_UNAUTHORIZED, "Bạn cần đăng nhập", "/dang-nhap");
+                    return false;
+                }
+                response.sendRedirect(contextPath + "/dang-nhap?redirect=" + relativeUri);
+                return false;
+            }
+            if (roles == null || !roles.contains("ADMIN")) {
+                if (isApiOrAjax) {
+                    sendJsonError(response, HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập", null);
+                    return false;
+                }
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Admin mới có quyền vào khu vực này.");
                 return false;
             }
         }
@@ -116,12 +189,27 @@ public class AuthInterceptor implements HandlerInterceptor {
                uri.startsWith("/api/hang-doi/status");
     }
 
+    private boolean isAuthenticatedRoute(String uri) {
+        return uri.equals("/su-kien") || uri.startsWith("/su-kien/");
+    }
+
+    private boolean isTicketSimulationRoute(String uri) {
+        return uri.startsWith("/ve/") && uri.endsWith("/gia-lap-su-dung");
+    }
+
+    private boolean isTicketManagementRoute(String uri) {
+        return uri.equals("/ve") || uri.startsWith("/ve/");
+    }
+
+    private boolean isAdminOnlyRoute(String uri) {
+        return uri.equals("/taikhoan") || uri.startsWith("/taikhoan/");
+    }
+
     private boolean isAdminOrganizerRoute(String uri) {
         return uri.equals("/sukien") || uri.startsWith("/sukien/") ||
                uri.equals("/donhang") || uri.startsWith("/donhang/") ||
-               uri.equals("/ve") || uri.startsWith("/ve/") ||
                uri.equals("/baocao") || uri.startsWith("/baocao/") ||
-               uri.equals("/taikhoan") || uri.startsWith("/taikhoan/") ||
+               uri.startsWith("/api/loaisukien/") ||
                uri.startsWith("/api/hang-doi/allow-next");
     }
 

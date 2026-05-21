@@ -124,8 +124,14 @@
     color: #fff;
     font-size: 15px;
     font-weight: 600;
-    padding: 13px;
+    padding: 0 24px;
     width: 100%;
+    min-height: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
     letter-spacing: 0.2px;
     transition: all .2s;
     cursor: pointer;
@@ -174,4 +180,51 @@
     font-size: 14px;
     padding: 12px 16px;
     margin-bottom: 20px;
+}
+
+.alert-success-custom {
+    background: rgba(16,185,129,0.1);
+    border-color: rgba(16,185,129,0.25);
+    color: #047857;
+}
+
+.auth-btn,
+.btn-login,
+.btn-register {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    height: 48px;
+    line-height: 1;
+    padding: 0 24px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.otp-input {
+    text-align: center;
+    letter-spacing: 8px;
+    font-weight: 700;
+    font-size: 20px;
+}
+
+.resend-form {
+    margin-top: 12px;
+    text-align: center;
+}
+
+.btn-resend-otp {
+    border: none;
+    background: transparent;
+    color: var(--dd-accent);
+    font-weight: 600;
+    min-height: 40px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.btn-resend-otp:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
 }

@@ -135,6 +135,12 @@
     min-height: 560px;
 }
 
+.dashboard-showcase {
+    isolation: isolate;
+    overflow: visible;
+    perspective: 1200px;
+}
+
 .dashboard-preview,
 .ticket-preview,
 .seat-preview,
@@ -156,6 +162,75 @@
     inset: 22px 0 auto 10px;
     border-radius: 28px;
     padding: 22px;
+}
+
+.dashboard-showcase .showcase-shell,
+.dashboard-showcase .kpi-card,
+.dashboard-showcase .chart-card,
+.dashboard-showcase .seat-cluster,
+.dashboard-showcase .qr-ticket-card,
+.dashboard-showcase .chart-bar {
+    transition:
+        transform .42s cubic-bezier(.2, .8, .2, 1),
+        box-shadow .42s ease,
+        border-color .42s ease,
+        filter .42s ease;
+    will-change: transform;
+}
+
+.dashboard-showcase .showcase-shell {
+    z-index: 1;
+}
+
+.dashboard-showcase .kpi-card,
+.dashboard-showcase .chart-card {
+    position: relative;
+    z-index: 2;
+}
+
+.dashboard-showcase .seat-cluster,
+.dashboard-showcase .qr-ticket-card {
+    z-index: 3;
+}
+
+.dashboard-showcase:hover .showcase-shell {
+    transform: translateY(-4px) scale(1.01);
+    border-color: rgba(37, 99, 235, 0.24);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16);
+    filter: brightness(1.02);
+}
+
+.dashboard-showcase:hover .kpi-1 {
+    transform: translate(-10px, -10px) scale(1.02);
+    box-shadow: 0 16px 34px rgba(37, 99, 235, 0.12);
+}
+
+.dashboard-showcase:hover .kpi-2 {
+    transform: translateY(-14px) scale(1.02);
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+}
+
+.dashboard-showcase:hover .kpi-3 {
+    transform: translate(10px, -10px) scale(1.02);
+    box-shadow: 0 16px 34px rgba(249, 115, 22, 0.12);
+}
+
+.dashboard-showcase:hover .chart-card {
+    transform: translateY(-8px) scale(1.01);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.10);
+    filter: brightness(1.02);
+}
+
+.dashboard-showcase:hover .seat-cluster {
+    transform: translate(-14px, 14px) rotate(-1deg);
+    border-color: rgba(37, 99, 235, 0.24);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+}
+
+.dashboard-showcase:hover .qr-ticket-card {
+    transform: translate(18px, -14px) rotate(1deg) scale(1.01);
+    border-color: rgba(249, 115, 22, 0.24);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
 }
 
 .preview-header {
@@ -246,6 +321,18 @@
 .chart-bars span {
     border-radius: 999px 999px 8px 8px;
     background: linear-gradient(180deg, #f97316, #2563eb);
+    transform-origin: center bottom;
+}
+
+.dashboard-showcase:hover .bar-1 { transform: translateY(-8px); }
+.dashboard-showcase:hover .bar-2 { transform: translateY(-14px); }
+.dashboard-showcase:hover .bar-3 { transform: translateY(-10px); }
+.dashboard-showcase:hover .bar-4 { transform: translateY(-18px); }
+.dashboard-showcase:hover .bar-5 { transform: translateY(-12px); }
+.dashboard-showcase:hover .bar-6 { transform: translateY(-16px); }
+
+.dashboard-showcase:hover .seat-cell.selected {
+    filter: brightness(1.08);
 }
 
 .ticket-preview {
@@ -329,11 +416,32 @@
     padding: 22px;
 }
 
+.landing-stat-card {
+    transition:
+        transform .28s cubic-bezier(.2, .8, .2, 1),
+        box-shadow .28s ease,
+        border-color .28s ease,
+        background .28s ease;
+    will-change: transform;
+}
+
+.landing-stat-card:hover {
+    transform: translateY(-10px) scale(1.015);
+    border-color: rgba(37, 99, 235, 0.35);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+}
+
 .trust-card strong {
     display: block;
     color: var(--text);
     font-size: 32px;
     font-weight: 800;
+    transition: color .28s ease;
+}
+
+.landing-stat-card:hover strong {
+    color: #2563eb;
 }
 
 .trust-card span {
@@ -647,6 +755,17 @@
     padding: 18px;
 }
 
+.process-card {
+    transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+    will-change: transform;
+}
+
+.process-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.16);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
 .step-card strong {
     width: 42px;
     height: 42px;
@@ -657,6 +776,13 @@
     color: #ffffff;
     background: var(--text);
     font-size: 18px;
+    transition: transform .28s ease, background-color .28s ease, box-shadow .28s ease;
+}
+
+.process-card:hover .step-number {
+    transform: rotate(-4deg) scale(1.08);
+    background: linear-gradient(135deg, #2563eb, #f97316);
+    box-shadow: 0 12px 24px rgba(37, 99, 235, 0.22);
 }
 
 .step-card span {
@@ -735,6 +861,46 @@
         width: 100%;
     }
 
+    .dashboard-showcase:hover .showcase-shell {
+        transform: translateY(-3px);
+    }
+
+    .dashboard-showcase:hover .kpi-1 {
+        transform: translate(-4px, -6px) scale(1.01);
+    }
+
+    .dashboard-showcase:hover .kpi-2 {
+        transform: translateY(-7px) scale(1.01);
+    }
+
+    .dashboard-showcase:hover .kpi-3 {
+        transform: translate(4px, -6px) scale(1.01);
+    }
+
+    .dashboard-showcase:hover .chart-card {
+        transform: translateY(-5px);
+    }
+
+    .dashboard-showcase:hover .seat-cluster {
+        transform: translate(-6px, 7px) rotate(-0.5deg);
+    }
+
+    .dashboard-showcase:hover .qr-ticket-card {
+        transform: translate(6px, -7px) rotate(0.5deg);
+    }
+
+    .dashboard-showcase:hover .bar-1,
+    .dashboard-showcase:hover .bar-3,
+    .dashboard-showcase:hover .bar-5 {
+        transform: translateY(-5px);
+    }
+
+    .dashboard-showcase:hover .bar-2,
+    .dashboard-showcase:hover .bar-4,
+    .dashboard-showcase:hover .bar-6 {
+        transform: translateY(-8px);
+    }
+
     .metric-grid,
     .trust-grid,
     .feature-grid,
@@ -771,5 +937,31 @@
 
     .event-media {
         height: 185px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dashboard-showcase .showcase-shell,
+    .dashboard-showcase .kpi-card,
+    .dashboard-showcase .chart-card,
+    .dashboard-showcase .seat-cluster,
+    .dashboard-showcase .qr-ticket-card,
+    .dashboard-showcase .chart-bar,
+    .landing-stat-card,
+    .process-card,
+    .step-card strong {
+        transition: none;
+    }
+
+    .dashboard-showcase:hover .showcase-shell,
+    .dashboard-showcase:hover .kpi-card,
+    .dashboard-showcase:hover .chart-card,
+    .dashboard-showcase:hover .seat-cluster,
+    .dashboard-showcase:hover .qr-ticket-card,
+    .dashboard-showcase:hover .chart-bar,
+    .landing-stat-card:hover,
+    .process-card:hover,
+    .process-card:hover .step-number {
+        transform: none;
     }
 }

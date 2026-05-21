@@ -12,5 +12,13 @@ public interface ChiTietVaiTroRepository extends JpaRepository<ChiTietVaiTro, Ch
 
     List<ChiTietVaiTro> findByMaND(String maND);
 
+    List<ChiTietVaiTro> findByMaVaiTro(String maVaiTro);
+
+    long countByMaVaiTro(String maVaiTro);
+
+    boolean existsByMaNDAndMaVaiTro(String maND, String maVaiTro);
+
+    void deleteByMaNDAndMaVaiTro(String maND, String maVaiTro);
+
     void deleteByMaND(String maND);
 }

@@ -30,28 +30,28 @@
 
                 <!-- Stat Cards -->
                 <div class="stat-row">
-                    <div class="stat-card">
+                    <div class="stat-card ui-hover-card">
                         <div class="stat-icon blue"><i class="fa-solid fa-cart-shopping"></i></div>
                         <div class="stat-info">
                             <div class="stat-value" id="statTotal">0</div>
                             <div class="stat-label">Tổng đơn hàng</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card ui-hover-card">
                         <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
                         <div class="stat-info">
                             <div class="stat-value" id="statPaid">0</div>
                             <div class="stat-label">Đã thanh toán</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card ui-hover-card">
                         <div class="stat-icon yellow"><i class="fa-solid fa-clock"></i></div>
                         <div class="stat-info">
                             <div class="stat-value" id="statWait">0</div>
                             <div class="stat-label">Chờ thanh toán</div>
                         </div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card ui-hover-card">
                         <div class="stat-icon red"><i class="fa-solid fa-ban"></i></div>
                         <div class="stat-info">
                             <div class="stat-value" id="statCancel">0</div>
@@ -90,8 +90,8 @@
                                 <tr>
                                     <th>Số Đơn Hàng</th>
                                     <th>Khách Hàng</th>
-                                    <th>Tổng Tiền</th>
-                                    <th>Thành Tiền</th>
+                                    <th class="money-cell">Tổng Tiền</th>
+                                    <th class="money-cell">Thành Tiền</th>
                                     <th>Thời Gian Đặt</th>
                                     <th>Hết Hạn</th>
                                     <th style="text-align:center;">Trạng Thái</th>
@@ -113,8 +113,14 @@
                                     <td><b th:text="${dh.soDonHang != null ? dh.soDonHang : dh.maDonHang}">DH001</b>
                                     </td>
                                     <td th:text="${dh.maKH != null and mapKhachHang.containsKey(dh.maKH) ? mapKhachHang.get(dh.maKH) : (dh.maKH != null ? dh.maKH : '-')}">-</td>
-                                    <td th:text="${dh.tongTien != null ? dh.tongTien + ' ₫' : '-'}">-</td>
-                                    <td th:text="${dh.thanhTien != null ? dh.thanhTien + ' ₫' : '-'}">-</td>
+                                    <td class="money-cell">
+                                        <span class="money" th:if="${dh.tongTien != null}" th:text="${#numbers.formatDecimal(dh.tongTien, 0, 'POINT', 0, 'COMMA') + ' ₫'}">0 ₫</span>
+                                        <span th:unless="${dh.tongTien != null}">-</span>
+                                    </td>
+                                    <td class="money-cell">
+                                        <span class="money" th:if="${dh.thanhTien != null}" th:text="${#numbers.formatDecimal(dh.thanhTien, 0, 'POINT', 0, 'COMMA') + ' ₫'}">0 ₫</span>
+                                        <span th:unless="${dh.thanhTien != null}">-</span>
+                                    </td>
                                     <td th:text="${dh.thoiGianDat != null ? dh.thoiGianDat : '-'}">-</td>
                                     <td th:text="${dh.thoiGianHetHan != null ? dh.thoiGianHetHan : '-'}">-</td>
                                     <td style="text-align:center;">

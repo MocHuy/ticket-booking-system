@@ -8,15 +8,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 @Service
 public class EmailService {
 
     private final LichSuGuiEmailRepository lichSuGuiEmailRepository;
+    private final IdGeneratorService idGeneratorService;
 
-    public EmailService(LichSuGuiEmailRepository lichSuGuiEmailRepository) {
+    public EmailService(LichSuGuiEmailRepository lichSuGuiEmailRepository, IdGeneratorService idGeneratorService) {
         this.lichSuGuiEmailRepository = lichSuGuiEmailRepository;
+        this.idGeneratorService = idGeneratorService;
     }
 
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
@@ -32,7 +33,7 @@ public class EmailService {
         }
 
         LichSuGuiEmail log = new LichSuGuiEmail();
-        log.setMaEmail("EM-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
+        log.setMaEmail(idGeneratorService.nextEmailLogId());
         log.setLoaiEmail("XAC_NHAN_DON_HANG");
         log.setDiaChiNhan(email);
         log.setTrangThai("Da_gui");
@@ -64,7 +65,7 @@ public class EmailService {
         }
 
         LichSuGuiEmail log = new LichSuGuiEmail();
-        log.setMaEmail("EM-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
+        log.setMaEmail(idGeneratorService.nextEmailLogId());
         log.setLoaiEmail("QR_CODE");
         log.setDiaChiNhan(email);
         log.setTrangThai("Da_gui");

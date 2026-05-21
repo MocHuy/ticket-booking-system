@@ -29,6 +29,9 @@ public class DonHangService {
     @Autowired
     private KhuVucRepository khuVucRepository;
 
+    @Autowired
+    private IdGeneratorService idGeneratorService;
+
     public List<DonHang> layTatCa() {
         return donHangRepository.findAll();
     }
@@ -58,7 +61,7 @@ public class DonHangService {
         }
         
         DonHang dh = new DonHang();
-        String maDon = "DH-" + System.currentTimeMillis();
+        String maDon = idGeneratorService.nextDonHangId();
         dh.setMaDonHang(maDon);
         dh.setSoDonHang(maDon);
         dh.setTrangThaiDonHang("Chờ thanh toán");
@@ -76,8 +79,9 @@ public class DonHangService {
             java.math.BigDecimal giaVe = (kv != null) ? kv.getGiaVe() : java.math.BigDecimal.ZERO;
             
             Ve v = new Ve();
-            v.setMaVe("VE-" + java.util.UUID.randomUUID().toString().substring(0, 8) + "-" + g.getMaGhe());
-            v.setMaQR(java.util.UUID.randomUUID().toString()); // Không tạo MaQR trước thanh toán thành công
+            String maVe = idGeneratorService.nextVeId();
+            v.setMaVe(maVe);
+            v.setMaQR("QR-" + maVe);
             v.setGiaVe(giaVe);
             v.setTrangThaiVe("Chưa sử dụng");
             v.setThoiGianPhat(new java.sql.Timestamp(System.currentTimeMillis()));

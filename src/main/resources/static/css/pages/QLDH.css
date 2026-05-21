@@ -322,3 +322,47 @@ tbody tr:hover { background: #f8faff; cursor: pointer; }
 }
 .btn-cancel-action:hover { background: #dc2626; }
 .btn-cancel-action:disabled { background: #fca5a5; cursor: not-allowed; }
+
+/* ---- SHARED CONTROL ALIGNMENT ---- */
+.toolbar-left {
+    align-items: center;
+    gap: 12px;
+}
+
+.search-wrapper,
+.filter-select,
+.btn-filter {
+    min-height: var(--control-height);
+    height: var(--control-height);
+}
+
+.search-wrapper input {
+    height: var(--control-height);
+    min-height: var(--control-height);
+    padding: 0 14px 0 38px;
+    border-radius: var(--control-radius);
+    line-height: 1.2;
+}
+
+.filter-select {
+    min-width: 190px;
+    padding: 0 38px 0 14px;
+    border-radius: var(--control-radius);
+    line-height: 1.2;
+}
+
+.btn-filter,
+.btn-close-modal,
+.btn-cancel-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.btn-filter {
+    padding: 0 18px;
+    border-radius: var(--control-radius);
+}

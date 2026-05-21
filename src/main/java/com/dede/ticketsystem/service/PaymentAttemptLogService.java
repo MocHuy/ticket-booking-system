@@ -17,6 +17,9 @@ public class PaymentAttemptLogService {
     @Autowired
     private GiaoDichThanhToanRepository giaoDichThanhToanRepository;
 
+    @Autowired
+    private IdGeneratorService idGeneratorService;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public GiaoDichThanhToan logAttempt(
         String orderId,
@@ -27,7 +30,7 @@ public class PaymentAttemptLogService {
         String ghiChuLoi
     ) {
         GiaoDichThanhToan gd = new GiaoDichThanhToan();
-        gd.setMaGiaoDich("GD-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
+        gd.setMaGiaoDich(idGeneratorService.nextGiaoDichId());
         gd.setSoTienThanhToan(amount);
         gd.setPhuongThucTT(paymentMethod);
         gd.setTrangThaiGD(status);

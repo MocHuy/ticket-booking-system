@@ -34,27 +34,34 @@
             <div class="collapse navbar-collapse" id="navMain">
                 <ul class="navbar-nav me-auto">
                     <!-- Public Links -->
-                    <li class="nav-item">
-                        <a class="nav-link" th:href="@{/}" data-nav-path="/">
-                            <i class="bi bi-house-door me-1"></i>Trang chủ
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/#events" data-nav-path="/#events">
-                            <i class="bi bi-calendar3 me-1"></i>Sự kiện
-                        </a>
-                    </li>
-                    
+                    <th:block th:if="${session.nguoiDung == null}">
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/}" data-nav-path="/">
+                                <i class="bi bi-house-door"></i>Trang chủ
+                            </a>
+                        </li>
+                    </th:block>
+
                     <!-- CUSTOMER Links -->
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and #lists.contains(session.roles, 'CUSTOMER'))}">
                         <li class="nav-item">
+                            <a class="nav-link" th:href="@{/}" data-nav-path="/">
+                                <i class="bi bi-house-door"></i>Trang chủ
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" th:href="@{/su-kien}" data-nav-path="/su-kien">
+                                <i class="bi bi-calendar3"></i>Sự kiện
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" th:href="@{/ve-cua-toi}" data-nav-path="/ve-cua-toi">
-                                <i class="bi bi-ticket-perforated me-1"></i>Vé của tôi
+                                <i class="bi bi-ticket-perforated"></i>Vé của tôi
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/don-hang-cua-toi}" data-nav-path="/don-hang-cua-toi">
-                                <i class="bi bi-receipt me-1"></i>Đơn hàng của tôi
+                                <i class="bi bi-receipt"></i>Đơn hàng của tôi
                             </a>
                         </li>
                     </th:block>
@@ -63,27 +70,27 @@
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'ADMIN') or #lists.contains(session.roles, 'ORGANIZER')))}">
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/sukien}" data-nav-path="/sukien">
-                                <i class="bi bi-calendar-event me-1"></i>Quản lý sự kiện
+                                <i class="bi bi-calendar-event"></i>Quản lý sự kiện
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/donhang}" data-nav-path="/donhang">
-                                <i class="bi bi-receipt me-1"></i>Đơn hàng
+                                <i class="bi bi-receipt"></i>Đơn hàng
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/ve}" data-nav-path="/ve">
-                                <i class="bi bi-ticket me-1"></i>Vé
+                                <i class="bi bi-ticket"></i>Vé
                             </a>
                         </li>
-                        <li class="nav-item">
+                        <li class="nav-item" th:if="${#lists.contains(session.roles, 'ADMIN')}">
                             <a class="nav-link" th:href="@{/taikhoan}" data-nav-path="/taikhoan">
-                                <i class="bi bi-person-workspace me-1"></i>Tài khoản
+                                <i class="bi bi-person-workspace"></i>Tài khoản
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/baocao}" data-nav-path="/baocao">
-                                <i class="bi bi-graph-up me-1"></i>Báo cáo
+                                <i class="bi bi-graph-up"></i>Báo cáo
                             </a>
                         </li>
                     </th:block>
@@ -92,7 +99,7 @@
                     <th:block th:if="${session.nguoiDung != null and (session.roles != null and (#lists.contains(session.roles, 'STAFF') or #lists.contains(session.roles, 'ADMIN')))}">
                         <li class="nav-item">
                             <a class="nav-link" th:href="@{/soat-ve}" data-nav-path="/soat-ve">
-                                <i class="bi bi-qr-code-scan me-1"></i>Soát vé
+                                <i class="bi bi-qr-code-scan"></i>Soát vé
                             </a>
                         </li>
                     </th:block>
@@ -100,16 +107,16 @@
                 <ul class="navbar-nav ms-auto align-items-center gap-2">
                     <!-- Chưa đăng nhập -->
                     <li class="nav-item d-flex gap-2" th:if="${session.nguoiDung == null}">
-                        <a class="btn btn-outline-light btn-sm" th:href="@{/dang-nhap}">Đăng nhập</a>
-                        <a class="btn btn-primary btn-sm text-white" th:href="@{/dang-ky}">Đăng ký</a>
+                        <a class="btn nav-auth-btn nav-login-btn btn-login" th:href="@{/dang-nhap}">Đăng nhập</a>
+                        <a class="btn nav-auth-btn nav-register-btn btn-register" th:href="@{/dang-ky}">Đăng ký</a>
                     </li>
                     <!-- Đã đăng nhập -->
                     <li class="nav-item dropdown" th:if="${session.nguoiDung != null}">
-                        <button class="nav-link dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="nav-link dropdown-toggle d-flex align-items-center gap-2 bg-transparent border-0 dd-user-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="dd-avatar">
                                 <span th:text="${#strings.substring(session.nguoiDung.tenTaiKhoan, 0, 1).toUpperCase()}">U</span>
                             </div>
-                            <span th:text="${session.nguoiDung.tenTaiKhoan}">Người dùng</span>
+                            <span class="dd-user-name" th:text="${session.nguoiDung.tenTaiKhoan}">Người dùng</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <!-- Vé của tôi (Chỉ hiện cho CUSTOMER) -->
@@ -120,8 +127,10 @@
                             <li th:if="${session.roles != null and #lists.contains(session.roles, 'CUSTOMER')}">
                                 <a class="dropdown-item" th:href="@{/don-hang-cua-toi}"><i class="bi bi-receipt me-2"></i>Đơn hàng của tôi</a>
                             </li>
-                            <!-- Tài khoản -->
-                            <li><a class="dropdown-item" th:href="@{/taikhoan}"><i class="bi bi-person me-2"></i>Tài khoản</a></li>
+                            <!-- Tài khoản hệ thống (ADMIN/ORGANIZER) -->
+                            <li th:if="${session.roles != null and #lists.contains(session.roles, 'ADMIN')}">
+                                <a class="dropdown-item" th:href="@{/taikhoan}"><i class="bi bi-person me-2"></i>Tài khoản</a>
+                            </li>
                             
                             <li><hr class="dropdown-divider"></li>
                             <li>

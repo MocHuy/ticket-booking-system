@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 @Service
 public class LogHanhViService {
@@ -16,11 +15,14 @@ public class LogHanhViService {
     @Autowired
     private LogHanhViRepository logHanhViRepository;
 
+    @Autowired
+    private IdGeneratorService idGeneratorService;
+
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String loaiHanhDong, String maSK, String maKH, String thietBi) {
         try {
             LogHanhVi logObj = new LogHanhVi();
-            logObj.setMaLog("LOG-" + System.currentTimeMillis() + "-" + UUID.randomUUID().toString().substring(0, 8));
+            logObj.setMaLog(idGeneratorService.nextLogHanhViId());
             logObj.setLoaiHanhDong(loaiHanhDong);
             logObj.setMaSK(maSK);
             logObj.setThoiGian(new Timestamp(System.currentTimeMillis()));

@@ -4,6 +4,7 @@ import com.dede.ticketsystem.model.SuKien;
 import com.dede.ticketsystem.model.KhuVuc;
 import com.dede.ticketsystem.model.Ghe;
 import com.dede.ticketsystem.model.DonHang;
+import com.dede.ticketsystem.model.SeatMapDTO;
 import com.dede.ticketsystem.service.SuKienService;
 import com.dede.ticketsystem.service.SessionService;
 import com.dede.ticketsystem.service.BookingService;
@@ -16,8 +17,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.util.UriUtils;
 
 import java.sql.Timestamp;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Controller
@@ -46,9 +49,19 @@ public class TrangChuController {
 
     @GetMapping("/")
     public String trangChu(Model model) {
-        List<SuKien> list = suKienService.timKiem("", "");
-        model.addAttribute("suKienList", list);
         return "Public/index";
+    }
+
+    @GetMapping("/su-kien")
+    public String danhSachSuKien(
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @RequestParam(required = false, defaultValue = "") String trangThai,
+            Model model) {
+        List<SuKien> list = suKienService.timKiem(keyword, trangThai);
+        model.addAttribute("suKienList", list);
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("trangThaiFilter", trangThai);
+        return "Public/su-kien";
     }
 
     @Autowired
@@ -101,7 +114,7 @@ public class TrangChuController {
             if (queueToken != null && !queueToken.trim().isEmpty()) {
                 redirectUrl += "?queueToken=" + queueToken;
             }
-            return "redirect:/dang-nhap?redirect=" + redirectUrl;
+            return "redirect:/dang-nhap?redirect=" + UriUtils.encode(redirectUrl, StandardCharsets.UTF_8);
         }
         if (!sessionService.hasRole("CUSTOMER")) {
             return "redirect:/";
@@ -135,12 +148,10 @@ public class TrangChuController {
             return "redirect:/";
         }
         
-        List<KhuVuc> zones = khuVucRepository.findByMaSK(maSK);
-        List<Ghe> seats = gheRepository.findByMaSK(maSK);
+        SeatMapDTO seatMap = suKienService.getSeatMap(maSK);
         
         model.addAttribute("suKien", sk);
-        model.addAttribute("zones", zones);
-        model.addAttribute("seats", seats);
+        model.addAttribute("seatMap", seatMap);
         return "Public/chon-ghe";
     }
 

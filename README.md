@@ -94,30 +94,39 @@ Chạy các lệnh sau tại thư mục gốc của dự án:
   mvn spring-boot:run
   ```
 
-### 4.3 Reset dữ liệu demo/runtime
-Các script reset nằm trong `Database/99_reset/` và chỉ xóa dữ liệu, không drop table.
+### 4.3 Reset database
+Các script reset nằm trong `Database/99_reset/` và chỉ xóa dữ liệu, không drop table, constraint, index, function hoặc procedure.
 
-- **Reset toàn bộ data** bằng Oracle SQL Developer hoặc SQLPlus:
+- **Xóa toàn bộ data**:
+  1. Mở Oracle SQL Developer.
+  2. Đăng nhập bằng user/schema của ứng dụng.
+  3. Chạy script:
   ```sql
   @Database/99_reset/reset_all_data.sql
   ```
-- **Reset runtime demo** nhưng giữ user, role, sự kiện, khu vực và ghế:
+  4. Restart app.
+
+  `reset_all_data.sql` sẽ xóa toàn bộ user, role, sự kiện, khu vực, ghế, vé, đơn hàng, giao dịch và dữ liệu master/demo. Sau khi chạy xong, schema còn cấu trúc rỗng.
+
+- **Chỉ xóa dữ liệu demo/runtime**:
   ```sql
   @Database/99_reset/reset_runtime_only.sql
   ```
-- **Tắt seed data khi start app:**
+  `reset_runtime_only.sql` chỉ xóa dữ liệu phát sinh khi demo như lịch sử soát vé, email log, giao dịch thanh toán, vé, đơn hàng, hàng đợi và log hành vi; user, role, sự kiện, khu vực và ghế được giữ lại.
+
+- **Giữ database rỗng hoàn toàn sau khi restart app:**
   ```properties
   app.seed.enabled=false
   ```
-- **Bật lại seed data:**
+- **Xóa data rồi để app seed lại dữ liệu mẫu sạch:**
   ```properties
   app.seed.enabled=true
   ```
-- **Reset runtime khi start app chỉ dành cho profile `dev` hoặc `local`:**
+- **Không tự động reset data mỗi lần chạy app:**
   ```properties
-  app.dev.reset-data-on-start=true
+  app.dev.reset-data-on-start=false
   ```
-  Mặc định là `false`; nếu không chạy profile `dev/local`, ứng dụng sẽ bỏ qua reset tự động.
+  Mặc định của project là `false`. Chỉ bật `app.dev.reset-data-on-start=true` khi cần reset runtime lúc start app và đang chạy profile `dev` hoặc `local`.
 
 ---
 
@@ -190,7 +199,7 @@ graph TD
 - [ ] **Bước 1: Trải nghiệm Khách hàng (Mua vé & Thanh toán)**
   1. Truy cập `/dang-nhap` bằng tài khoản: `customer` / `123456`.
   2. Bấm vào trang chủ, chọn sự kiện **"Dề Dê Summer Concert 2026"**.
-  3. Bấm nút **Đặt vé ngay**. Trình duyệt sẽ đưa bạn qua hàng đợi ảo (nếu quá tải) hoặc trực tiếp vào trang chọn ghế `/mua-ve/SK001`.
+  3. Bấm nút **Đặt vé ngay**. Trình duyệt sẽ đưa bạn qua hàng đợi ảo (nếu quá tải) hoặc trực tiếp vào trang chọn ghế `/mua-ve/SK0001`.
   4. Tại sơ đồ ghế:
      - Chọn 1 ghế **Standard** (ví dụ hàng B) hoặc **VIP** (ví dụ hàng W). Bạn sẽ thấy ghế đổi màu sang trạng thái phát sáng xanh dương đại diện cho *Đang chọn bởi tôi*.
      - Bấm **TIẾP TỤC THANH TOÁN**.

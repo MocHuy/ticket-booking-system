@@ -1,22 +1,53 @@
 package com.dede.ticketsystem.service;
 
+import com.dede.ticketsystem.model.DonHang;
+import com.dede.ticketsystem.model.Ghe;
+import com.dede.ticketsystem.model.KhachHang;
+import com.dede.ticketsystem.model.LichSuSoatVe;
+import com.dede.ticketsystem.model.SuKien;
 import com.dede.ticketsystem.model.Ve;
 import com.dede.ticketsystem.model.VeDTO;
+import com.dede.ticketsystem.model.VeQuanLyDTO;
+import com.dede.ticketsystem.repository.DonHangRepository;
+import com.dede.ticketsystem.repository.GheRepository;
+import com.dede.ticketsystem.repository.KhachHangRepository;
+import com.dede.ticketsystem.repository.LichSuSoatVeRepository;
+import com.dede.ticketsystem.repository.SuKienRepository;
 import com.dede.ticketsystem.repository.VeRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.Timestamp;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 public class VeService {
 
     private final VeRepository veRepository;
+    private final DonHangRepository donHangRepository;
+    private final GheRepository gheRepository;
+    private final SuKienRepository suKienRepository;
+    private final KhachHangRepository khachHangRepository;
+    private final LichSuSoatVeRepository lichSuSoatVeRepository;
+    private final IdGeneratorService idGeneratorService;
 
-    public VeService(VeRepository veRepository) {
+    public VeService(VeRepository veRepository,
+                     DonHangRepository donHangRepository,
+                     GheRepository gheRepository,
+                     SuKienRepository suKienRepository,
+                     KhachHangRepository khachHangRepository,
+                     LichSuSoatVeRepository lichSuSoatVeRepository,
+                     IdGeneratorService idGeneratorService) {
         this.veRepository = veRepository;
+        this.donHangRepository = donHangRepository;
+        this.gheRepository = gheRepository;
+        this.suKienRepository = suKienRepository;
+        this.khachHangRepository = khachHangRepository;
+        this.lichSuSoatVeRepository = lichSuSoatVeRepository;
+        this.idGeneratorService = idGeneratorService;
     }
 
     public List<Ve> layTatCa() {
@@ -25,6 +56,17 @@ public class VeService {
 
     public List<Ve> timKiem(String keyword, String trangThai) {
         return veRepository.search(keyword, trangThai);
+    }
+
+    public List<VeQuanLyDTO> timKiemQuanLy(String keyword, String trangThai) {
+        String cleanKeyword = normalize(keyword);
+        String cleanTrangThai = normalize(trangThai);
+        return veRepository.findAll().stream()
+                .map(this::toQuanLyDTO)
+                .filter(dto -> cleanTrangThai == null || cleanTrangThai.equals(dto.getTrangThaiVe()))
+                .filter(dto -> cleanKeyword == null || matchesKeyword(dto, cleanKeyword))
+                .sorted(Comparator.comparing(VeQuanLyDTO::getThoiGianPhat, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
     }
 
     public Optional<Ve> timTheoMa(String maVe) {
@@ -36,7 +78,7 @@ public class VeService {
         
         // Auto-generate MaVe if not provided
         if (dto.getMaVe() == null || dto.getMaVe().trim().isEmpty()) {
-            ve.setMaVe("VE-" + System.currentTimeMillis());
+            ve.setMaVe(idGeneratorService.nextVeId());
         } else {
             if (veRepository.existsById(dto.getMaVe())) {
                 throw new RuntimeException("Mã vé đã tồn tại!");
@@ -46,7 +88,7 @@ public class VeService {
 
         // Auto-generate QR code if not provided
         if (dto.getMaQR() == null || dto.getMaQR().trim().isEmpty()) {
-            ve.setMaQR(UUID.randomUUID().toString());
+            ve.setMaQR(buildQrCode(ve.getMaVe()));
         } else {
             if (veRepository.existsByMaQR(dto.getMaQR())) {
                 throw new RuntimeException("Mã QR đã tồn tại!");
@@ -111,6 +153,42 @@ public class VeService {
         return parsePayloadAndFindVe(payloadOrCode, false);
     }
 
+    @Transactional
+    public String giaLapSuDungVe(String maVe, String maNV) {
+        Ve ve = veRepository.findByMaVeWithLock(maVe)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy vé: " + maVe));
+
+        String trangThai = ve.getTrangThaiVe();
+        if ("Đã sử dụng".equals(trangThai)) {
+            return "Vé đã được sử dụng trước đó.";
+        }
+        if ("Đã hủy".equals(trangThai)) {
+            throw new RuntimeException("Vé đã hủy, không thể giả lập sử dụng.");
+        }
+        if (!"Chưa sử dụng".equals(trangThai)) {
+            throw new RuntimeException("Chỉ có thể giả lập dùng vé ở trạng thái Chưa sử dụng.");
+        }
+
+        Timestamp now = new Timestamp(System.currentTimeMillis());
+        ve.setTrangThaiVe("Đã sử dụng");
+        ve.setThoiGianSuDung(now);
+        veRepository.save(ve);
+
+        LichSuSoatVe history = new LichSuSoatVe();
+        history.setMaLichSu(idGeneratorService.nextLichSuSoatVeId());
+        history.setThoiGianQuet(now);
+        history.setKetQuaQuet("Hợp lệ");
+        history.setCongSoat("WEB_ADMIN");
+        history.setNguonDuLieu("Online");
+        history.setDaDongBo("Y");
+        history.setThoiGianDongBo(now);
+        history.setMaVe(ve.getMaVe());
+        history.setMaNV(normalize(maNV));
+        lichSuSoatVeRepository.save(history);
+
+        return "Đã giả lập vé " + maVe + " được sử dụng thành công.";
+    }
+
     public Optional<Ve> parsePayloadAndFindVeWithLock(String payloadOrCode) {
         return parsePayloadAndFindVe(payloadOrCode, true);
     }
@@ -171,6 +249,75 @@ public class VeService {
 
     private Optional<Ve> findByMaQR(String maQR, boolean withLock) {
         return withLock ? veRepository.findByMaQRWithLock(maQR) : veRepository.findByMaQR(maQR);
+    }
+
+    private VeQuanLyDTO toQuanLyDTO(Ve ve) {
+        VeQuanLyDTO dto = new VeQuanLyDTO();
+        dto.setMaVe(ve.getMaVe());
+        dto.setMaQR(ve.getMaQR());
+        dto.setMaSK(ve.getMaSK());
+        dto.setMaGhe(ve.getMaGhe());
+        dto.setMaDonHang(ve.getMaDonHang());
+        dto.setGiaVe(ve.getGiaVe());
+        dto.setTrangThaiVe(ve.getTrangThaiVe());
+        dto.setThoiGianPhat(ve.getThoiGianPhat());
+        dto.setThoiGianSuDung(ve.getThoiGianSuDung());
+
+        if (ve.getMaSK() != null) {
+            suKienRepository.findById(ve.getMaSK()).map(SuKien::getTenSK).ifPresent(dto::setTenSuKien);
+        }
+        if (ve.getMaGhe() != null) {
+            gheRepository.findById(ve.getMaGhe()).map(Ghe::getTenGhe).ifPresent(dto::setTenGhe);
+        }
+        if (ve.getMaDonHang() != null) {
+            donHangRepository.findById(ve.getMaDonHang()).ifPresent(dh -> {
+                dto.setSoDonHang(dh.getSoDonHang());
+                dto.setMaKH(dh.getMaKH());
+                if (dh.getMaKH() != null) {
+                    khachHangRepository.findById(dh.getMaKH())
+                            .map(KhachHang::getHoTen)
+                            .ifPresent(dto::setTenKhachHang);
+                }
+            });
+        }
+        return dto;
+    }
+
+    private boolean matchesKeyword(VeQuanLyDTO dto, String keyword) {
+        String needle = keyword.toLowerCase(Locale.ROOT);
+        return contains(dto.getMaVe(), needle)
+                || contains(dto.getMaQR(), needle)
+                || contains(dto.getMaSK(), needle)
+                || contains(dto.getTenSuKien(), needle)
+                || contains(dto.getMaGhe(), needle)
+                || contains(dto.getTenGhe(), needle)
+                || contains(dto.getMaDonHang(), needle)
+                || contains(dto.getSoDonHang(), needle)
+                || contains(dto.getMaKH(), needle)
+                || contains(dto.getTenKhachHang(), needle);
+    }
+
+    private boolean contains(String value, String needle) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(needle);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String clean = value.trim();
+        return clean.isEmpty() ? null : clean;
+    }
+
+    private String buildQrCode(String maVe) {
+        String base = "QR-" + maVe;
+        String candidate = base;
+        int suffix = 1;
+        while (veRepository.existsByMaQR(candidate)) {
+            suffix++;
+            candidate = base + "-" + suffix;
+        }
+        return candidate;
     }
 
     private Timestamp parseTimestamp(String timeStr) {

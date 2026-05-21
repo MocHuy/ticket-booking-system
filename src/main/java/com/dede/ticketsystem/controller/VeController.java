@@ -2,6 +2,8 @@ package com.dede.ticketsystem.controller;
 
 import com.dede.ticketsystem.model.Ve;
 import com.dede.ticketsystem.model.VeDTO;
+import com.dede.ticketsystem.model.VeQuanLyDTO;
+import com.dede.ticketsystem.service.SessionService;
 import com.dede.ticketsystem.service.VeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -21,10 +23,12 @@ public class VeController {
 
     private final VeService veService;
     private final JdbcTemplate jdbcTemplate;
+    private final SessionService sessionService;
 
-    public VeController(VeService veService, JdbcTemplate jdbcTemplate) {
+    public VeController(VeService veService, JdbcTemplate jdbcTemplate, SessionService sessionService) {
         this.veService = veService;
         this.jdbcTemplate = jdbcTemplate;
+        this.sessionService = sessionService;
     }
 
     @GetMapping
@@ -32,9 +36,9 @@ public class VeController {
             @RequestParam(required = false, defaultValue = "") String keyword,
             @RequestParam(required = false, defaultValue = "") String trangThai,
             Model model) {
-        List<Ve> list;
+        List<VeQuanLyDTO> list;
         try {
-            list = veService.timKiem(keyword, trangThai);
+            list = veService.timKiemQuanLy(keyword, trangThai);
         } catch (Exception e) {
             list = new java.util.ArrayList<>();
         }
@@ -53,9 +57,10 @@ public class VeController {
             
             dsGhe = jdbcTemplate.queryForList("SELECT MaGhe, MaKhuVuc FROM GHENGOI");
             
-            dsDonHang = jdbcTemplate.queryForList("SELECT dh.MaDonHang, kh.HoTen FROM DONHANG dh JOIN KHACHHANG kh ON dh.MaKH = kh.MaKH");
+            dsDonHang = jdbcTemplate.queryForList("SELECT dh.MaDonHang, dh.SoDonHang, kh.HoTenKH FROM DONHANG dh LEFT JOIN KHACHHANG kh ON dh.MaKH = kh.MaKH");
             for (Map<String, Object> dh : dsDonHang) {
-                mapDonHang.put((String) dh.get("MADONHANG"), (String) dh.get("HOTEN"));
+                Object label = dh.get("SODONHANG") != null ? dh.get("SODONHANG") : dh.get("MADONHANG");
+                mapDonHang.put((String) dh.get("MADONHANG"), label != null ? label.toString() : "");
             }
         } catch (Exception e) {}
 
@@ -146,6 +151,17 @@ public class VeController {
             redirectAttributes.addFlashAttribute("thanhCong", "Đã hủy vé " + maVe + " thành công!");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("loi", "Lỗi hủy vé: " + e.getMessage());
+        }
+        return "redirect:/ve";
+    }
+
+    @PostMapping("/{maVe}/gia-lap-su-dung")
+    public String giaLapSuDung(@PathVariable String maVe, RedirectAttributes redirectAttributes) {
+        try {
+            String message = veService.giaLapSuDungVe(maVe, sessionService.getCurrentMaNV());
+            redirectAttributes.addFlashAttribute("thanhCong", message);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("loi", e.getMessage());
         }
         return "redirect:/ve";
     }

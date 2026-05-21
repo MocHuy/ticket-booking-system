@@ -43,7 +43,7 @@
                     <div class="toolbar-left">
                         <div class="search-wrapper">
                             <i class="fa-solid fa-magnifying-glass"></i>
-                            <input type="text" id="searchInput" placeholder="Mã vé, Mã QR, Mã SK...">
+                            <input type="text" id="searchInput" placeholder="Mã vé, QR, sự kiện, đơn hàng...">
                         </div>
                         <select id="statusFilter" class="filter-select">
                             <option value="">Tất cả trạng thái</option>
@@ -76,7 +76,7 @@
                                     <th>Sự Kiện</th>
                                     <th>Ghế</th>
                                     <th>Đơn Hàng</th>
-                                    <th>Giá Vé</th>
+                                    <th class="money-cell">Giá Vé</th>
                                     <th style="text-align:center;">Trạng Thái</th>
                                     <th style="text-align:center;">Thao Tác</th>
                                 </tr>
@@ -91,13 +91,23 @@
                                     </td>
                                 </tr>
                                 <!-- Data rows -->
-                                <tr th:each="v : ${veList}" th:attr="data-ma=${v.maVe}"
+                                <tr th:each="v : ${veList}" th:attr="data-ma=${v.maVe},data-mask=${v.maSK}"
                                     onclick="xemChiTiet(this.getAttribute('data-ma'))">
                                     <td><b th:text="${v.maVe}">VE-001</b></td>
-                                    <td th:text="${v.maSK != null and mapSuKien.containsKey(v.maSK) ? mapSuKien.get(v.maSK) : (v.maSK != null ? v.maSK : '-')}">-</td>
-                                    <td th:text="${v.maGhe != null ? v.maGhe : '-'}">-</td>
-                                    <td th:text="${v.maDonHang != null and mapDonHang.containsKey(v.maDonHang) ? mapDonHang.get(v.maDonHang) : (v.maDonHang != null ? v.maDonHang : '-')}">-</td>
-                                    <td th:text="${v.giaVe != null ? v.giaVe + ' ₫' : '-'}">-</td>
+                                    <td>
+                                        <span th:text="${v.tenSuKien != null ? v.tenSuKien : (v.maSK != null ? v.maSK : '-')}">-</span>
+                                        <small class="sub-code" th:if="${v.maSK != null}" th:text="${v.maSK}">SK</small>
+                                    </td>
+                                    <td th:text="${v.tenGhe != null ? v.tenGhe : (v.maGhe != null ? v.maGhe : '-')}">-</td>
+                                    <td>
+                                        <span class="order-code" th:text="${v.soDonHang != null ? v.soDonHang : (v.maDonHang != null ? v.maDonHang : 'Chưa có đơn')}">DH</span>
+                                        <small class="sub-code" th:if="${v.maDonHang != null}" th:text="${v.maDonHang}">Mã đơn</small>
+                                        <small class="sub-code" th:if="${v.tenKhachHang != null}" th:text="${v.tenKhachHang}">Khách hàng</small>
+                                    </td>
+                                    <td class="money-cell">
+                                        <span class="money" th:if="${v.giaVe != null}" th:text="${#numbers.formatDecimal(v.giaVe, 0, 'POINT', 0, 'COMMA') + ' ₫'}">0 ₫</span>
+                                        <span th:unless="${v.giaVe != null}">-</span>
+                                    </td>
                                     <td style="text-align:center;">
                                         <span th:if="${v.trangThaiVe == 'Chưa sử dụng'}" class="badge badge-wait">Chưa sử dụng</span>
                                         <span th:if="${v.trangThaiVe == 'Đã sử dụng'}" class="badge badge-paid">Đã sử dụng</span>
@@ -111,6 +121,15 @@
                                             title="Sửa vé">
                                             <i class="fa-solid fa-pen"></i>
                                         </button>
+                                        <form th:if="${v.trangThaiVe == 'Chưa sử dụng'}"
+                                              th:action="@{/ve/{maVe}/gia-lap-su-dung(maVe=${v.maVe})}"
+                                              method="post"
+                                              style="display:inline;"
+                                              onsubmit="return confirm('Bạn muốn giả lập vé này đã được sử dụng?');">
+                                            <button type="submit" class="btn-action btn-use" title="Giả lập dùng vé">
+                                                <i class="fa-solid fa-circle-check"></i>
+                                            </button>
+                                        </form>
                                         <button class="btn-action btn-delete"
                                             th:disabled="${v.trangThaiVe == 'Đã hủy'}"
                                             th:attr="onclick='huyVe(\'' + ${v.maVe} + '\')'" title="Hủy vé">
@@ -215,8 +234,8 @@
                 
                 // For event filter, we might need to check a hidden data attribute or the text content
                 // Since maSK is not explicitly in a data attribute per row yet, let's assume it's in the text or add it
-                const rowMaSK = row.cells[1].textContent.trim();
-                const matchSk = sk === '' || rowMaSK.includes(sk); // Note: this is crude, better add data-mask
+                const rowMaSK = row.getAttribute('data-mask') || '';
+                const matchSk = sk === '' || rowMaSK === sk;
 
                 row.style.display = (matchKw && matchSt && matchSk) ? '' : 'none';
                 if (matchKw && matchSt && matchSk) visible++;
